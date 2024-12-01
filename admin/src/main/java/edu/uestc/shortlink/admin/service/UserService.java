@@ -2,6 +2,7 @@ package edu.uestc.shortlink.admin.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 import edu.uestc.shortlink.admin.dao.entity.UserDO;
+import edu.uestc.shortlink.admin.dto.req.UserRegisterReqDTO;
 import edu.uestc.shortlink.admin.dto.resp.UserRespDTO;
 
 public interface UserService extends IService<UserDO> {
@@ -18,4 +19,10 @@ public interface UserService extends IService<UserDO> {
      * @return 是否存在
      */
     Boolean hasUserName(String username);
+
+    /**
+     * 注册用户
+     * @param requestParam 注册用户请求参数
+     */
+    void register(UserRegisterReqDTO requestParam);
 }

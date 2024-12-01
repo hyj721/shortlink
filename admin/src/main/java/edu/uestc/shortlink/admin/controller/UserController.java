@@ -3,6 +3,7 @@ package edu.uestc.shortlink.admin.controller;
 import cn.hutool.core.bean.BeanUtil;
 import edu.uestc.shortlink.admin.common.convention.result.Result;
 import edu.uestc.shortlink.admin.common.convention.result.Results;
+import edu.uestc.shortlink.admin.dto.req.UserRegisterReqDTO;
 import edu.uestc.shortlink.admin.dto.resp.UserActualRespDTO;
 import edu.uestc.shortlink.admin.dto.resp.UserRespDTO;
 import edu.uestc.shortlink.admin.service.UserService;
@@ -22,7 +23,7 @@ public class UserController {
     /**
      * 根据用户名查询用户信息
      */
-    @GetMapping("/api/shortlink/v1/user/{username}")
+    @GetMapping("/api/short-link/v1/user/{username}")
     public Result<UserRespDTO> getUserByUsername(@PathVariable String username) {
         return Results.success(userService.getUserByUsername(username));
     }
@@ -30,13 +31,22 @@ public class UserController {
     /**
      * 根据用户名查询未脱敏用户信息
      */
-    @GetMapping("/api/shortlink/v1/actual/user/{username}")
+    @GetMapping("/api/short-link/v1/actual/user/{username}")
     public Result<UserActualRespDTO> getActualUserByUsername(@PathVariable String username) {
         return Results.success(BeanUtil.toBean(userService.getUserByUsername(username), UserActualRespDTO.class));
     }
 
-    @GetMapping("/api/shortlink/v1/user/has-username")
+    @GetMapping("/api/short-link/v1/user/has-username")
     public Result<Boolean> hasUserName(@RequestParam("username") String username) {
         return Results.success(userService.hasUserName(username));
+    }
+
+    /**
+     * 注册用户
+     */
+    @PostMapping("/api/short-link/v1/user")
+    public Result<Void> register(@RequestBody UserRegisterReqDTO requestParam) {
+        userService.register(requestParam);
+        return Results.success();
     }
 }
