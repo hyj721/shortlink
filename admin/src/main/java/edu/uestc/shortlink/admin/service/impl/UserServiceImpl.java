@@ -2,6 +2,7 @@ package edu.uestc.shortlink.admin.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import edu.uestc.shortlink.admin.common.convention.exception.ClientException;
@@ -9,6 +10,7 @@ import edu.uestc.shortlink.admin.common.enums.UserErrorCodeEnum;
 import edu.uestc.shortlink.admin.dao.entity.UserDO;
 import edu.uestc.shortlink.admin.dao.mapper.UserMapper;
 import edu.uestc.shortlink.admin.dto.req.UserRegisterReqDTO;
+import edu.uestc.shortlink.admin.dto.req.UserUpdateReqDTO;
 import edu.uestc.shortlink.admin.dto.resp.UserRespDTO;
 import edu.uestc.shortlink.admin.service.UserService;
 import lombok.RequiredArgsConstructor;
@@ -85,5 +87,18 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, UserDO> implements 
         } finally {
             lock.unlock();
         }
+    }
+
+    /**
+     * 根据用户名修改用户
+     *
+     * @param requestParam 修改用户请求参数
+     */
+    @Override
+    public void update(UserUpdateReqDTO requestParam) {
+        // TODO 验证当前用户名是否为登录用户
+        LambdaUpdateWrapper<UserDO> updateWrapper = Wrappers.lambdaUpdate(UserDO.class)
+                .eq(UserDO::getUsername, requestParam.getUsername());
+        baseMapper.update(BeanUtil.toBean(requestParam, UserDO.class), updateWrapper);
     }
 }
