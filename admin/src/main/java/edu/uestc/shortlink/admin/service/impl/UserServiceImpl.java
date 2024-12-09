@@ -1,6 +1,7 @@
 package edu.uestc.shortlink.admin.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.core.lang.Snowflake;
 import cn.hutool.core.lang.UUID;
 import com.alibaba.fastjson2.JSON;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -42,6 +43,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, UserDO> implements 
     private final RBloomFilter<String> userRegisterCachePenetrationBloomFilter;
     private final RedissonClient redissonClient;
     private final StringRedisTemplate stringRedisTemplate;
+    private final Snowflake snowflake;
 
     /**
      * 根据用户名查询用户信息
@@ -84,7 +86,9 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, UserDO> implements 
         RLock lock = redissonClient.getLock(LOCK_USER_REGISTER_KEY + requestParam.getUsername());
         try {
             if (lock.tryLock()) {
-                int inserted = baseMapper.insert(BeanUtil.toBean(requestParam, UserDO.class));
+                UserDO userDO = BeanUtil.toBean(requestParam, UserDO.class);
+                userDO.setUserId(snowflake.nextId());
+                int inserted = baseMapper.insert(userDO);
                 if (inserted < 1) {
                     throw new ClientException(USER_SAVE_ERROR);
                 }

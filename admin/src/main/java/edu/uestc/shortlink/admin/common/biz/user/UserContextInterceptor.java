@@ -1,6 +1,7 @@
 package edu.uestc.shortlink.admin.common.biz.user;
 
 import com.alibaba.fastjson2.JSON;
+import edu.uestc.shortlink.admin.common.convention.exception.ClientException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -22,15 +23,16 @@ public class UserContextInterceptor implements HandlerInterceptor {
         String token = request.getHeader("token");
 
         if (!StringUtils.hasText(username) || !StringUtils.hasText(token)) {
-            return true;
+            throw new ClientException("用户未登录");
         }
 
 
         Object userInfoJsonStr = stringRedisTemplate.opsForHash().get("login_" + username, token);
-        if (userInfoJsonStr != null) {
-            UserInfoDTO userInfoDTO = JSON.parseObject(userInfoJsonStr.toString(), UserInfoDTO.class);
-            UserContext.setUser(userInfoDTO);
+        if (userInfoJsonStr == null) {
+            throw new ClientException("用户未登录");
         }
+        UserInfoDTO userInfoDTO = JSON.parseObject(userInfoJsonStr.toString(), UserInfoDTO.class);
+        UserContext.setUser(userInfoDTO);
         return true;
     }
 

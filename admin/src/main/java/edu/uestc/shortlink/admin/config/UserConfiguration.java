@@ -15,6 +15,9 @@ public class UserConfiguration implements WebMvcConfigurer {
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(userContextInterceptor)
-                .addPathPatterns("/**");
+                .addPathPatterns("/**")
+                .excludePathPatterns("/api/short-link/v1/user/register")
+                .excludePathPatterns("/api/short-link/v1/user/login")
+                .excludePathPatterns("/api/short-link/v1/user/check-login");
     }
 }

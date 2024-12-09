@@ -1,20 +1,25 @@
 package edu.uestc.shortlink.admin.dao.entity;
 
-import com.baomidou.mybatisplus.annotation.*;
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
 import edu.uestc.shortlink.admin.common.database.BaseDO;
 import lombok.Data;
-
-import java.util.Date;
 
 @Data
 @TableName("t_user")
 public class UserDO extends BaseDO {
 
     /**
-     * id
+     * 主键id
      */
     @TableId(value = "id", type = IdType.AUTO)
     private Long id;
+
+    /**
+     * 用户id
+     */
+    private Long userId;
 
     /**
      * 用户名

@@ -39,6 +39,9 @@ public class UserController {
         return Results.success(BeanUtil.toBean(userService.getUserByUsername(username), UserActualRespDTO.class));
     }
 
+    /**
+     * 查看是否含有用户名
+     */
     @GetMapping("/api/short-link/v1/user/has-username")
     public Result<Boolean> hasUserName(@RequestParam("username") String username) {
         return Results.success(userService.hasUserName(username));
@@ -47,7 +50,7 @@ public class UserController {
     /**
      * 注册用户
      */
-    @PostMapping("/api/short-link/v1/user")
+    @PostMapping("/api/short-link/v1/user/register")
     public Result<Void> register(@RequestBody UserRegisterReqDTO requestParam) {
         userService.register(requestParam);
         return Results.success();

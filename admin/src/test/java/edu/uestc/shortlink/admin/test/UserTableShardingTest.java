@@ -4,6 +4,7 @@ package edu.uestc.shortlink.admin.test;
 public class UserTableShardingTest {
     public static final String SQL = "CREATE TABLE `t_user_%d` (\n" +
             "  `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT 'ID',\n" +
+            "  `user_id` bigint(20) NOT NULL COMMENT '用户ID',\n" +
             "  `username` varchar(256) DEFAULT NULL COMMENT '用户名',\n" +
             "  `password` varchar(512) DEFAULT NULL COMMENT '密码',\n" +
             "  `real_name` varchar(256) DEFAULT NULL COMMENT '真实姓名',\n" +
@@ -17,7 +18,12 @@ public class UserTableShardingTest {
             "  UNIQUE KEY `idx_unique_username` (`username`) USING BTREE\n" +
             ") ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4;";
 
+    public static final String DROP_SQL = "DROP TABLE IF EXISTS t_user_%d;";
+
     public static void main(String[] args) {
+        for (int i = 0; i < 16; i++) {
+            System.out.println(String.format(DROP_SQL, i));
+        }
         for (int i = 0; i < 16; i++) {
             System.out.printf((SQL) + "%n", i);
         }
