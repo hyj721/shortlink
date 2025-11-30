@@ -3,9 +3,11 @@ package com.uestc.shortlink.admin.controller;
 import cn.hutool.core.bean.BeanUtil;
 import com.uestc.shortlink.admin.common.convention.result.Result;
 import com.uestc.shortlink.admin.common.convention.result.Results;
+import com.uestc.shortlink.admin.dto.req.UserLoginReqDTO;
 import com.uestc.shortlink.admin.dto.req.UserRegisterReqDTO;
 import com.uestc.shortlink.admin.dto.req.UserUpdateReqDTO;
 import com.uestc.shortlink.admin.dto.res.ActualUserRespDTO;
+import com.uestc.shortlink.admin.dto.res.UserLoginRespDTO;
 import com.uestc.shortlink.admin.dto.res.UserRespDTO;
 import com.uestc.shortlink.admin.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -52,5 +54,17 @@ public class UserController {
         userService.updateUser(requestParam);
         return Results.success();
     }
-    
+
+    @Operation(summary = "用户登录")
+    @PostMapping("/user/login")
+    public Result<UserLoginRespDTO> login(@RequestBody UserLoginReqDTO requestParam) {
+        return Results.success(userService.login(requestParam));
+    }
+
+    @Operation(summary = "检查用户是否登录")
+    @GetMapping("/user/check-login")
+    public Result<Boolean> checkLogin(@RequestParam("username") String username, @RequestParam("token") String token) {
+        return Results.success(userService.checkLogin(username, token));
+    }
+
 }
