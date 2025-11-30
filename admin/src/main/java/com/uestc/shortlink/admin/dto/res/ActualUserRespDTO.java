@@ -7,7 +7,7 @@ import lombok.Data;
 
 @Data
 @Builder
-public class UserRespDTO {
+public class ActualUserRespDTO {
 
     /**
      * ID
@@ -27,7 +27,6 @@ public class UserRespDTO {
     /**
      * 手机号
      */
-    @JsonSerialize(using = PhoneDesensitizationSerializer.class)
     private String phone;
 
     /**

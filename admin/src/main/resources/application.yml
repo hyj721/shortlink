@@ -1,4 +1,6 @@
 spring:
+  main:
+    banner-mode: off
   datasource:
     username: root
     password: mysql
@@ -10,6 +12,11 @@ spring:
       idle-timeout: 300000
       maximum-pool-size: 5
       minimum-idle: 5
+  data:
+    redis:
+      host: 127.0.0.1
+      port: 6379
+      password: redis
 server:
   port: 8002
 
