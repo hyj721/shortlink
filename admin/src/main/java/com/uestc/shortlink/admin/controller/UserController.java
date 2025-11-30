@@ -4,6 +4,7 @@ import cn.hutool.core.bean.BeanUtil;
 import com.uestc.shortlink.admin.common.convention.result.Result;
 import com.uestc.shortlink.admin.common.convention.result.Results;
 import com.uestc.shortlink.admin.dto.req.UserRegisterReqDTO;
+import com.uestc.shortlink.admin.dto.req.UserUpdateReqDTO;
 import com.uestc.shortlink.admin.dto.res.ActualUserRespDTO;
 import com.uestc.shortlink.admin.dto.res.UserRespDTO;
 import com.uestc.shortlink.admin.service.UserService;
@@ -44,4 +45,12 @@ public class UserController {
         userService.register(requestParam);
         return Results.success();
     }
+
+    @Operation(summary = "用户修改个人信息")
+    @PutMapping("/user")
+    public Result<Void> updateUser(@RequestBody UserUpdateReqDTO requestParam) {
+        userService.updateUser(requestParam);
+        return Results.success();
+    }
+    
 }
