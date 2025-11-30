@@ -1,5 +1,7 @@
 package com.uestc.shortlink.admin.controller;
 
+import com.uestc.shortlink.admin.common.convention.result.Result;
+import com.uestc.shortlink.admin.common.convention.result.Results;
 import com.uestc.shortlink.admin.dto.res.UserRespDTO;
 import com.uestc.shortlink.admin.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -20,7 +22,7 @@ public class UserController {
 
     @Operation(summary = "根据用户名查询用户信息")
     @GetMapping("/user/{username}")
-    public UserRespDTO getUserByUsername(@PathVariable String username) {
-        return userService.getUserByUsername(username);
+    public Result<UserRespDTO> getUserByUsername(@PathVariable String username) {
+        return Results.success(userService.getUserByUsername(username));
     }
 }
