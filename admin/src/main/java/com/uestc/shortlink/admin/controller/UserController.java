@@ -1,5 +1,7 @@
 package com.uestc.shortlink.admin.controller;
 
+import com.uestc.shortlink.admin.dto.res.UserRespDTO;
+import com.uestc.shortlink.admin.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -14,9 +16,11 @@ import org.springframework.web.bind.annotation.RestController;
 @Tag(name = "用户管理")
 public class UserController {
 
+    private final UserService userService;
+
     @Operation(summary = "根据用户名查询用户信息")
     @GetMapping("/user/{username}")
-    public String getUserByUsername(@PathVariable String username) {
-        return "hello " + username;
+    public UserRespDTO getUserByUsername(@PathVariable String username) {
+        return userService.getUserByUsername(username);
     }
 }
