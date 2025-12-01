@@ -16,7 +16,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/short-link/v1")
+@RequestMapping("/api/short-link/admin/v1")
 @RequiredArgsConstructor
 @Tag(name = "用户管理")
 public class UserController {

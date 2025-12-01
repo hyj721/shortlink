@@ -16,7 +16,7 @@ import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/short-link/v1")
+@RequestMapping("/api/short-link/admin/v1")
 @Tag(name = "短链接分组管理")
 public class GroupController {
     private final GroupService groupService;
