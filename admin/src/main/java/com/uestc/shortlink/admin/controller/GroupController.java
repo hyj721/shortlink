@@ -2,8 +2,9 @@ package com.uestc.shortlink.admin.controller;
 
 import com.uestc.shortlink.admin.common.convention.result.Result;
 import com.uestc.shortlink.admin.common.convention.result.Results;
-import com.uestc.shortlink.admin.dto.req.ShortLinkGroupUpdateReqDTO;
 import com.uestc.shortlink.admin.dto.req.ShortLinkGroupSaveReqDTO;
+import com.uestc.shortlink.admin.dto.req.ShortLinkGroupSortReqDTO;
+import com.uestc.shortlink.admin.dto.req.ShortLinkGroupUpdateReqDTO;
 import com.uestc.shortlink.admin.dto.res.ShortLinkGroupRespDTO;
 import com.uestc.shortlink.admin.service.GroupService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -49,7 +50,8 @@ public class GroupController {
 
     @PostMapping("/group/sort")
     @Operation(summary = "排序短链接分组")
-    public Result<Void> sortGroup(@RequestBody List<ShortLinkGroupRespDTO> requestParam) {
+    public Result<Void> sortGroup(@RequestBody List<ShortLinkGroupSortReqDTO> requestParam) {
+        groupService.sortGroup(requestParam);
         return Results.success();
     }
 }
