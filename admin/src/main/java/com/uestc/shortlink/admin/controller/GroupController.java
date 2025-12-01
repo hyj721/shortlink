@@ -2,6 +2,7 @@ package com.uestc.shortlink.admin.controller;
 
 import com.uestc.shortlink.admin.common.convention.result.Result;
 import com.uestc.shortlink.admin.common.convention.result.Results;
+import com.uestc.shortlink.admin.dto.req.ShortLinkGroupUpdateReqDTO;
 import com.uestc.shortlink.admin.dto.req.ShortLinkSaveReqDTO;
 import com.uestc.shortlink.admin.dto.res.ShortLinkGroupRespDTO;
 import com.uestc.shortlink.admin.service.GroupService;
@@ -30,5 +31,12 @@ public class GroupController {
     @Operation(summary = "查询短链接分组集合")
     public Result<List<ShortLinkGroupRespDTO>> listGroup() {
         return Results.success(groupService.listGroup());
+    }
+
+    @PutMapping("/group")
+    @Operation(summary = "修改短链接分组名")
+    public Result<Void> updateGroup(@RequestBody ShortLinkGroupUpdateReqDTO requestParam) {
+        groupService.updateGroup(requestParam);
+        return Results.success();
     }
 }

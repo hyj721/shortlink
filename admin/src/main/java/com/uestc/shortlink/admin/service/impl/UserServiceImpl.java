@@ -9,6 +9,7 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.uestc.shortlink.admin.common.biz.user.UserContext;
 import com.uestc.shortlink.admin.common.constant.RedisCacheConstant;
 import com.uestc.shortlink.admin.common.convention.exception.ClientException;
 import com.uestc.shortlink.admin.common.enums.UserErrorCodeEnum;
@@ -96,7 +97,9 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, UserDO> implements 
 
     @Override
     public void updateUser(UserUpdateReqDTO requestParam) {
-        // TODO 验证当前用户是否为登录用户
+        if (!requestParam.getUsername().equals(UserContext.getUsername())) {
+            throw new ClientException("当前登录用户修改请求异常");
+        }
         LambdaUpdateWrapper<UserDO> updateWrapper = Wrappers.lambdaUpdate(UserDO.class)
                 .eq(UserDO::getUsername, requestParam.getUsername());
         baseMapper.update(BeanUtil.toBean(requestParam, UserDO.class), updateWrapper);
