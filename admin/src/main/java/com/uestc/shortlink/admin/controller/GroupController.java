@@ -39,4 +39,11 @@ public class GroupController {
         groupService.updateGroup(requestParam);
         return Results.success();
     }
+
+    @DeleteMapping("/group/{gid}")
+    @Operation(summary = "删除短链接分组")
+    public Result<Void> deleteGroup(@PathVariable String gid) {
+        groupService.deleteGroup(gid);
+        return Results.success();
+    }
 }
