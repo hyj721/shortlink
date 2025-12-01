@@ -3,7 +3,7 @@ package com.uestc.shortlink.admin.controller;
 import com.uestc.shortlink.admin.common.convention.result.Result;
 import com.uestc.shortlink.admin.common.convention.result.Results;
 import com.uestc.shortlink.admin.dto.req.ShortLinkGroupUpdateReqDTO;
-import com.uestc.shortlink.admin.dto.req.ShortLinkSaveReqDTO;
+import com.uestc.shortlink.admin.dto.req.ShortLinkGroupSaveReqDTO;
 import com.uestc.shortlink.admin.dto.res.ShortLinkGroupRespDTO;
 import com.uestc.shortlink.admin.service.GroupService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -22,7 +22,7 @@ public class GroupController {
 
     @PostMapping("/group")
     @Operation(summary = "新增短链接分组")
-    public Result<Void> saveGroup(@RequestBody ShortLinkSaveReqDTO requestParam) {
+    public Result<Void> saveGroup(@RequestBody ShortLinkGroupSaveReqDTO requestParam) {
         groupService.saveGroup(requestParam);
         return Results.success();
     }
@@ -44,6 +44,12 @@ public class GroupController {
     @Operation(summary = "删除短链接分组")
     public Result<Void> deleteGroup(@PathVariable String gid) {
         groupService.deleteGroup(gid);
+        return Results.success();
+    }
+
+    @PostMapping("/group/sort")
+    @Operation(summary = "排序短链接分组")
+    public Result<Void> sortGroup(@RequestBody List<ShortLinkGroupRespDTO> requestParam) {
         return Results.success();
     }
 }

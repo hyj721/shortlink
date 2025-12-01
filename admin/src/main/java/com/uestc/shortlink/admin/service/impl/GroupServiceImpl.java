@@ -8,7 +8,7 @@ import com.uestc.shortlink.admin.common.biz.user.UserContext;
 import com.uestc.shortlink.admin.dao.entity.GroupDO;
 import com.uestc.shortlink.admin.dao.mapper.GroupMapper;
 import com.uestc.shortlink.admin.dto.req.ShortLinkGroupUpdateReqDTO;
-import com.uestc.shortlink.admin.dto.req.ShortLinkSaveReqDTO;
+import com.uestc.shortlink.admin.dto.req.ShortLinkGroupSaveReqDTO;
 import com.uestc.shortlink.admin.dto.res.ShortLinkGroupRespDTO;
 import com.uestc.shortlink.admin.service.GroupService;
 import com.uestc.shortlink.admin.util.RandomGenerator;
@@ -24,7 +24,7 @@ import java.util.List;
 public class GroupServiceImpl extends ServiceImpl<GroupMapper, GroupDO> implements GroupService {
 
     @Override
-    public void saveGroup(ShortLinkSaveReqDTO requestParam) {
+    public void saveGroup(ShortLinkGroupSaveReqDTO requestParam) {
         String gid;
         do {
             gid = RandomGenerator.generateGid();
