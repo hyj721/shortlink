@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.uestc.shortlink.admin.common.biz.user.UserContext;
 import com.uestc.shortlink.admin.dao.entity.GroupDO;
 import com.uestc.shortlink.admin.dao.mapper.GroupMapper;
+import com.uestc.shortlink.admin.dto.req.ShortLinkGroupUpdateReqDTO;
 import com.uestc.shortlink.admin.dto.req.ShortLinkSaveReqDTO;
 import com.uestc.shortlink.admin.dto.res.ShortLinkGroupRespDTO;
 import com.uestc.shortlink.admin.service.GroupService;
