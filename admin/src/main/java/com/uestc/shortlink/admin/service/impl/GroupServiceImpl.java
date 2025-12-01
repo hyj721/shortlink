@@ -1,6 +1,7 @@
 package com.uestc.shortlink.admin.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.uestc.shortlink.admin.common.biz.user.UserContext;
@@ -32,6 +33,7 @@ public class GroupServiceImpl extends ServiceImpl<GroupMapper, GroupDO> implemen
         baseMapper.insert(GroupDO.builder()
                 .gid(gid)
                 .name(requestParam.getName())
+                .username(UserContext.getUsername())
                 .sortOrder(0)
                 .build());
     }
@@ -52,6 +54,19 @@ public class GroupServiceImpl extends ServiceImpl<GroupMapper, GroupDO> implemen
                         .build())
                 .toList();
         return groupRespDTOS;
+    }
+
+
+    @Override
+    public void updateGroup(ShortLinkGroupUpdateReqDTO requestParam) {
+        LambdaUpdateWrapper<GroupDO> updateWrapper = Wrappers.lambdaUpdate(GroupDO.class)
+                .eq(GroupDO::getUsername, UserContext.getUsername())
+                .eq(GroupDO::getGid, requestParam.getGid())
+                .eq(GroupDO::getDelFlag, 0);
+        GroupDO newGroup = GroupDO.builder()
+                .name(requestParam.getName())
+                .build();
+        baseMapper.update(newGroup, updateWrapper);
     }
 
     private boolean hasGid(String gid) {
