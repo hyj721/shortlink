@@ -9,12 +9,16 @@ import com.uestc.shortlink.project.service.ShortLinkService;
 import com.uestc.shortlink.project.util.HashUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.redisson.api.RBloomFilter;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 
 @Service
 @Slf4j
 @RequiredArgsConstructor
 public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLinkDO> implements ShortLinkService {
+
+    private final RBloomFilter<String> shortUrlCreateBloomFilter;
 
     @Override
     public ShortLinkCreateRespDTO createShortLink(ShortLinkCreateReqDTO requestParam) {
@@ -32,7 +36,12 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                 .validDateType(requestParam.getValidDateType())
                 .describe(requestParam.getDescribe())
                 .build();
-        baseMapper.insert(shortLinkDO);
+        try {
+            baseMapper.insert(shortLinkDO);
+        } catch (DuplicateKeyException e) {
+            log.warn("短链接{}重复入库", fullShortUrl);
+        }
+        shortUrlCreateBloomFilter.add(fullShortUrl);
         return ShortLinkCreateRespDTO.builder()
                 .gid(requestParam.getGid())
                 .originUrl(requestParam.getOriginUrl())
@@ -41,7 +50,21 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
     }
 
     private String generateSuffix(ShortLinkCreateReqDTO requestParam) {
-        String originUrl = requestParam.getOriginUrl();
-        return HashUtil.hashToBase62(originUrl);
+        int retryCount = 0;
+        String shortUri;
+        while (true) {
+            if (retryCount > 10) {
+                throw new RuntimeException("短链接频繁生成，请稍后再试");
+            }
+            String originUrl = requestParam.getOriginUrl();
+            // 加盐，让每次重试时的结果不同，否则是无意义重试
+            originUrl += System.currentTimeMillis();
+            shortUri = HashUtil.hashToBase62(originUrl);
+            if (!shortUrlCreateBloomFilter.contains(shortUri)) {
+                break;
+            }
+            retryCount++;
+        }
+        return shortUri;
     }
 }
