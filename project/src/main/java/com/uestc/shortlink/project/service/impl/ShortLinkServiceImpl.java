@@ -1,6 +1,7 @@
 package com.uestc.shortlink.project.service.impl;
 
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.uestc.shortlink.project.common.convention.exception.ServiceException;
 import com.uestc.shortlink.project.dao.entity.ShortLinkDO;
 import com.uestc.shortlink.project.dao.mapper.ShortLinkMapper;
 import com.uestc.shortlink.project.dto.req.ShortLinkCreateReqDTO;
@@ -40,6 +41,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
             baseMapper.insert(shortLinkDO);
         } catch (DuplicateKeyException e) {
             log.warn("短链接{}重复入库", fullShortUrl);
+            throw new ServiceException(String.format("短链接：%s 生成重复", fullShortUrl));
         }
         shortUrlCreateBloomFilter.add(fullShortUrl);
         return ShortLinkCreateRespDTO.builder()
