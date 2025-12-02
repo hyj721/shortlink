@@ -28,7 +28,7 @@ public class ShortLinkController {
     }
 
     @Operation(summary = "分页查询短链接")
-    @GetMapping("/api/short-link/v1/page")
+    @GetMapping("/page")
     public Result<IPage<ShortLinkPageRespDTO>> pageShortLink(ShortLinkPageReqDTO requestParam) {
         return Results.success(shortLinkService.pageShortLink(requestParam));
     }
