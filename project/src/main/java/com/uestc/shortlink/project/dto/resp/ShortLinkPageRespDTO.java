@@ -1,20 +1,13 @@
-package com.uestc.shortlink.project.dao.entity;
+package com.uestc.shortlink.project.dto.resp;
 
-import com.baomidou.mybatisplus.annotation.TableField;
-import com.baomidou.mybatisplus.annotation.TableName;
-import com.uestc.shortlink.project.common.database.BaseDO;
-import lombok.*;
+import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.Data;
 
 import java.util.Date;
 
-@EqualsAndHashCode(callSuper = true)
 @Data
-@TableName("t_link")
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
-public class ShortLinkDO extends BaseDO {
-
+@Schema(description = "短链分页返回参数")
+public class ShortLinkPageRespDTO {
     /**
      * id
      */
@@ -51,16 +44,6 @@ public class ShortLinkDO extends BaseDO {
     private String gid;
 
     /**
-     * 启用标识 0：启用 1：未启用
-     */
-    private Integer enableStatus;
-
-    /**
-     * 创建类型 0：接口创建 1：控制台创建
-     */
-    private Integer createdType;
-
-    /**
      * 有效期类型 0：永久有效 1：自定义
      */
     private Integer validDateType;
@@ -73,12 +56,11 @@ public class ShortLinkDO extends BaseDO {
     /**
      * 描述
      */
-    @TableField("`describe`")
     private String describe;
+
 
     /**
      * 图标
      */
     private String favicon;
-
 }
