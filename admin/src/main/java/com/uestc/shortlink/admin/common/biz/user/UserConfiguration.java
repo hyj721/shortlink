@@ -16,10 +16,11 @@ public class UserConfiguration implements WebMvcConfigurer {
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(userTransmitInterceptor)
                 .addPathPatterns("/**")
-                .excludePathPatterns("/api/short-link/v1/user/login")
-                .excludePathPatterns("/api/short-link/v1/user")
+                .excludePathPatterns("/api/short-link/admin/v1/user/login")
+                .excludePathPatterns("/user/has-username")
                 .excludePathPatterns("/doc.html/**")
                 .excludePathPatterns("/v3/api-docs/**")
+                .excludePathPatterns("/webjars/**")
                 .excludePathPatterns("/error")
         ;
     }
