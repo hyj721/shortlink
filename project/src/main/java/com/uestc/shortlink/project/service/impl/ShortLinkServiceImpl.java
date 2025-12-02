@@ -62,7 +62,8 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
             // 加盐，让每次重试时的结果不同，否则是无意义重试
             originUrl += System.currentTimeMillis();
             shortUri = HashUtil.hashToBase62(originUrl);
-            if (!shortUrlCreateBloomFilter.contains(shortUri)) {
+            String fullShortUrl = requestParam.getDomain() + "/" + shortUri;
+            if (!shortUrlCreateBloomFilter.contains(fullShortUrl)) {
                 break;
             }
             retryCount++;
