@@ -1,7 +1,5 @@
 package com.uestc.shortlink.admin.dto.res;
 
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import com.uestc.shortlink.admin.common.serialize.PhoneDesensitizationSerializer;
 import lombok.Builder;
 import lombok.Data;
 
