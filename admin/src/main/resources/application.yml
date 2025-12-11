@@ -3,7 +3,7 @@ spring:
     banner-mode: off
   datasource:
     driver-class-name: org.apache.shardingsphere.driver.ShardingSphereDriver
-    url: jdbc:shardingsphere:classpath:shardingsphere-config.yml
+    url: jdbc:shardingsphere:classpath:shardingsphere-config-${database.env:dev}.yml
   data:
     redis:
       host: 127.0.0.1
