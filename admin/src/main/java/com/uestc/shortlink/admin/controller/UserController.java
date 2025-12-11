@@ -63,14 +63,14 @@ public class UserController {
 
     @Operation(summary = "检查用户是否登录")
     @GetMapping("/user/check-login")
-    public Result<Boolean> checkLogin(@RequestParam("username") String username, @RequestParam("token") String token) {
-        return Results.success(userService.checkLogin(username, token));
+    public Result<Boolean> checkLogin() {
+        return Results.success(userService.checkLogin());
     }
 
     @Operation(summary = "用户登出")
     @PostMapping("/user/logout")
-    public Result<Void> logout(@RequestParam("username") String username, @RequestParam("token") String token) {
-        userService.logout(username, token);
+    public Result<Void> logout() {
+        userService.logout();
         return Results.success();
     }
 

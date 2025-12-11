@@ -1,15 +1,14 @@
 package com.uestc.shortlink.admin.service.impl;
 
+import cn.dev33.satoken.stp.StpUtil;
 import cn.hutool.core.bean.BeanUtil;
-import cn.hutool.core.collection.CollUtil;
-import cn.hutool.core.lang.UUID;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.uestc.shortlink.admin.common.biz.user.UserContext;
+import com.uestc.shortlink.admin.common.biz.user.UserInfoDTO;
 import com.uestc.shortlink.admin.common.constant.RedisCacheConstant;
 import com.uestc.shortlink.admin.common.convention.exception.ClientException;
 import com.uestc.shortlink.admin.common.enums.UserErrorCodeEnum;
@@ -29,9 +28,6 @@ import org.redisson.api.RedissonClient;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
-
-import java.util.Map;
-import java.util.concurrent.TimeUnit;
 
 @Service
 @Slf4j
@@ -114,41 +110,27 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, UserDO> implements 
         if (userDO == null) {
             throw new ClientException("用户不存在");
         }
-        /**
-         * Hash
-         * Key：login_用户名
-         * Value：
-         *  Key：token标识
-         *  Val：JSON 字符串（用户信息）
-         */
-        Map<Object, Object> entries = stringRedisTemplate.opsForHash().entries(RedisCacheConstant.USER_LOGIN_KEY + userDO.getUsername());
-        // 如果已经登录，则刷新token剩余时间并返回原token
-        if (CollUtil.isNotEmpty(entries)) {
-            stringRedisTemplate.expire(RedisCacheConstant.USER_LOGIN_KEY + userDO.getUsername(), 30, TimeUnit.MINUTES);
-            String token = (String) entries.keySet().iterator().next();
-            return new UserLoginRespDTO(token);
-        }
-        String uuid = UUID.randomUUID().toString();
-        try {
-            stringRedisTemplate.opsForHash().put(RedisCacheConstant.USER_LOGIN_KEY + userDO.getUsername(), uuid, objectMapper.writeValueAsString(userDO));
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException(e);
-        }
-        stringRedisTemplate.expire(RedisCacheConstant.USER_LOGIN_KEY + userDO.getUsername(), 30, TimeUnit.MINUTES);
-        return new UserLoginRespDTO(uuid);
+        StpUtil.login(userDO.getUsername());
+        UserInfoDTO userInfo = UserInfoDTO.builder()
+                .userId(userDO.getId())
+                .username(userDO.getUsername())
+                .realName(userDO.getRealName())
+                .build();
+        StpUtil.getSession().set("userInfo", userInfo);
+        return new UserLoginRespDTO(StpUtil.getTokenValue());
     }
 
     @Override
-    public Boolean checkLogin(String username, String token) {
-        return stringRedisTemplate.opsForHash().get(RedisCacheConstant.USER_LOGIN_KEY + username, token) != null;
+    public Boolean checkLogin() {
+        return StpUtil.isLogin();
     }
 
     @Override
-    public void logout(String username, String token) {
+    public void logout() {
         // 先检查用户是否登录
-        if (!checkLogin(username, token)) {
+        if (!checkLogin()) {
             throw new ClientException("用户Token不存在或未登录");
         }
-        stringRedisTemplate.delete(RedisCacheConstant.USER_LOGIN_KEY + username);
+        StpUtil.logout();
     }
 }

@@ -31,6 +31,7 @@
         <guava.version>30.0-jre</guava.version>
         <knife4j-openapi3-jakarta-spring-boot-starter.version>4.5.0
         </knife4j-openapi3-jakarta-spring-boot-starter.version>
+        <satoken.version>1.44.0</satoken.version>
     </properties>
 
     <dependencies>
@@ -119,6 +120,19 @@
                 <artifactId>knife4j-openapi3-jakarta-spring-boot-starter</artifactId>
                 <version>${knife4j-openapi3-jakarta-spring-boot-starter.version}</version>
             </dependency>
+
+            <dependency>
+                <groupId>cn.dev33</groupId>
+                <artifactId>sa-token-spring-boot3-starter</artifactId>
+                <version>${satoken.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>cn.dev33</groupId>
+                <artifactId>sa-token-redis-template</artifactId>
+                <version>${satoken.version}</version>
+            </dependency>
+
         </dependencies>
     </dependencyManagement>
 
@@ -131,6 +145,7 @@
                 <configuration>
                     <source>17</source>
                     <target>17</target>
+                    <parameters>true</parameters>
                 </configuration>
             </plugin>
         </plugins>

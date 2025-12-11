@@ -6,6 +6,7 @@ import com.uestc.shortlink.admin.common.convention.errorcode.BaseErrorCode;
 import com.uestc.shortlink.admin.common.convention.exception.AbstractException;
 import com.uestc.shortlink.admin.common.convention.result.Result;
 import com.uestc.shortlink.admin.common.convention.result.Results;
+import com.uestc.shortlink.admin.common.enums.UserErrorCodeEnum;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -54,6 +55,15 @@ public class GlobalExceptionHandler {
         }
         log.error("[{}] {} [ex] {}", request.getMethod(), request.getRequestURL().toString(), ex.toString());
         return Results.failure(ex);
+    }
+
+    /**
+     * 拦截 Sa-Token 未登录异常
+     */
+    @ExceptionHandler(value = cn.dev33.satoken.exception.NotLoginException.class)
+    public Result notLoginExceptionHandler(HttpServletRequest request, cn.dev33.satoken.exception.NotLoginException ex) {
+        log.warn("[{}] {} [未登录] {}", request.getMethod(), getUrl(request), ex.getMessage());
+        return Results.failure(UserErrorCodeEnum.USER_TOKEN_FAIL.code(), UserErrorCodeEnum.USER_TOKEN_FAIL.message());
     }
 
     /**

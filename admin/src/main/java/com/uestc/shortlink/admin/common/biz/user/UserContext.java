@@ -1,23 +1,25 @@
 package com.uestc.shortlink.admin.common.biz.user;
 
-import com.alibaba.ttl.TransmittableThreadLocal;
-
-import java.util.Optional;
+import cn.dev33.satoken.stp.StpUtil;
+import com.uestc.shortlink.admin.common.convention.exception.ClientException;
 
 /**
  * 用户上下文
  */
 public final class UserContext {
 
-    private static final ThreadLocal<UserInfoDTO> USER_THREAD_LOCAL = new TransmittableThreadLocal<>();
-
     /**
-     * 设置用户至上下文
+     * 获取当前登录用户信息
      *
-     * @param user 用户详情信息
+     * @return 用户信息
+     * @throws ClientException 未登录或用户信息不存在时抛出
      */
-    public static void setUser(UserInfoDTO user) {
-        USER_THREAD_LOCAL.set(user);
+    public static UserInfoDTO getUserInfo() {
+        UserInfoDTO userInfo = (UserInfoDTO) StpUtil.getSession().get("userInfo");
+        if (userInfo == null) {
+            throw new ClientException("用户未登录或登录已过期");
+        }
+        return userInfo;
     }
 
     /**
@@ -26,8 +28,7 @@ public final class UserContext {
      * @return 用户 ID
      */
     public static Long getUserId() {
-        UserInfoDTO userInfoDTO = USER_THREAD_LOCAL.get();
-        return Optional.ofNullable(userInfoDTO).map(UserInfoDTO::getUserId).orElse(null);
+        return getUserInfo().getUserId();
     }
 
     /**
@@ -36,8 +37,7 @@ public final class UserContext {
      * @return 用户名称
      */
     public static String getUsername() {
-        UserInfoDTO userInfoDTO = USER_THREAD_LOCAL.get();
-        return Optional.ofNullable(userInfoDTO).map(UserInfoDTO::getUsername).orElse(null);
+        return getUserInfo().getUsername();
     }
 
     /**
@@ -46,14 +46,6 @@ public final class UserContext {
      * @return 用户真实姓名
      */
     public static String getRealName() {
-        UserInfoDTO userInfoDTO = USER_THREAD_LOCAL.get();
-        return Optional.ofNullable(userInfoDTO).map(UserInfoDTO::getRealName).orElse(null);
-    }
-
-    /**
-     * 清理用户上下文
-     */
-    public static void removeUser() {
-        USER_THREAD_LOCAL.remove();
+        return getUserInfo().getRealName();
     }
 }
