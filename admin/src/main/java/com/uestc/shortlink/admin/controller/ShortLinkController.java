@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/short-link/admin/v1")
-@Tag(name = "短链接管理")
+@Tag(name = "短链接后台管理接口")
 public class ShortLinkController {
     ShortLinkRemoteService shortLinkRemoteService = new ShortLinkRemoteService() {
     };

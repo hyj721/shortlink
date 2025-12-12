@@ -5,12 +5,15 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.uestc.shortlink.admin.common.biz.user.UserContext;
+import com.uestc.shortlink.admin.common.convention.result.Result;
 import com.uestc.shortlink.admin.dao.entity.GroupDO;
 import com.uestc.shortlink.admin.dao.mapper.GroupMapper;
+import com.uestc.shortlink.admin.dto.req.ShortLinkGroupSaveReqDTO;
 import com.uestc.shortlink.admin.dto.req.ShortLinkGroupSortReqDTO;
 import com.uestc.shortlink.admin.dto.req.ShortLinkGroupUpdateReqDTO;
-import com.uestc.shortlink.admin.dto.req.ShortLinkGroupSaveReqDTO;
 import com.uestc.shortlink.admin.dto.res.ShortLinkGroupRespDTO;
+import com.uestc.shortlink.admin.remote.dto.ShortLinkRemoteService;
+import com.uestc.shortlink.admin.remote.dto.resp.ShortLinkGroupCountResp;
 import com.uestc.shortlink.admin.service.GroupService;
 import com.uestc.shortlink.admin.util.RandomGenerator;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +26,9 @@ import java.util.List;
 @Slf4j
 @RequiredArgsConstructor
 public class GroupServiceImpl extends ServiceImpl<GroupMapper, GroupDO> implements GroupService {
+
+    ShortLinkRemoteService shortLinkRemoteService = new ShortLinkRemoteService() {
+    };
 
     @Override
     public void saveGroup(ShortLinkGroupSaveReqDTO requestParam) {
@@ -41,17 +47,36 @@ public class GroupServiceImpl extends ServiceImpl<GroupMapper, GroupDO> implemen
 
     @Override
     public List<ShortLinkGroupRespDTO> listGroup() {
+        // 1. 构建查询条件：当前用户未删除的分组，按排序和更新时间降序
         LambdaQueryWrapper<GroupDO> queryWrapper = Wrappers.lambdaQuery(GroupDO.class)
                 .eq(GroupDO::getDelFlag, 0)
                 .eq(GroupDO::getUsername, UserContext.getUsername())
                 .orderByDesc(GroupDO::getSortOrder, GroupDO::getUpdateTime);
         List<GroupDO> groupDOS = baseMapper.selectList(queryWrapper);
+
+        // 2. 调用远程服务获取每个分组的短链接数量
+        Result<List<ShortLinkGroupCountResp>> listResult = shortLinkRemoteService
+                .listGroupShortLinkCount(groupDOS.stream().map(GroupDO::getGid).toList());
+
+        // 3. 组装返回结果，匹配每个分组对应的短链接数量
         List<ShortLinkGroupRespDTO> groupRespDTOS = groupDOS.stream()
-                .map(groupDO -> ShortLinkGroupRespDTO.builder()
-                        .gid(groupDO.getGid())
-                        .name(groupDO.getName())
-                        .sortOrder(groupDO.getSortOrder())
-                        .build())
+                .map(groupDO -> {
+                    // 根据 gid 匹配短链接数量，默认为 0
+                    Integer shortLinkCount = 0;
+                    if (listResult != null && listResult.getData() != null) {
+                        shortLinkCount = listResult.getData().stream()
+                                .filter(item -> item.getGid().equals(groupDO.getGid()))
+                                .findFirst()
+                                .map(ShortLinkGroupCountResp::getShortLinkCount)
+                                .orElse(0);
+                    }
+                    return ShortLinkGroupRespDTO.builder()
+                            .gid(groupDO.getGid())
+                            .name(groupDO.getName())
+                            .sortOrder(groupDO.getSortOrder())
+                            .shortLinkCount(shortLinkCount)
+                            .build();
+                })
                 .toList();
         return groupRespDTOS;
     }
