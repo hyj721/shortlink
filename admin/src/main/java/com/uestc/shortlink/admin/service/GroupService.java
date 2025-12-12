@@ -12,9 +12,16 @@ import java.util.List;
 public interface GroupService extends IService<GroupDO> {
     /**
      * 新增短链接分组
-     *
      */
     void saveGroup(ShortLinkGroupSaveReqDTO requestParam);
+
+    /**
+     * 新增短链接分组（指定用户名）
+     *
+     * @param username  用户名
+     * @param groupName 分组名称
+     */
+    void saveGroup(String username, String groupName);
 
     /**
      * 查询用户短链接分组集合

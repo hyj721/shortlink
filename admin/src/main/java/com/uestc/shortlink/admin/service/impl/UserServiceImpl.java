@@ -19,6 +19,7 @@ import com.uestc.shortlink.admin.dto.req.UserRegisterReqDTO;
 import com.uestc.shortlink.admin.dto.req.UserUpdateReqDTO;
 import com.uestc.shortlink.admin.dto.res.UserLoginRespDTO;
 import com.uestc.shortlink.admin.dto.res.UserRespDTO;
+import com.uestc.shortlink.admin.service.GroupService;
 import com.uestc.shortlink.admin.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -37,6 +38,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, UserDO> implements 
     private final RBloomFilter<String> userRegisterBloomFilter;
     private final RedissonClient redissonClient;
     private final StringRedisTemplate stringRedisTemplate;
+    private final GroupService groupService;
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
@@ -84,6 +86,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, UserDO> implements 
                 throw new ClientException(UserErrorCodeEnum.USER_SAVE_ERROR);
             }
             userRegisterBloomFilter.add(requestParam.getUsername());
+            // 注册成功后，创建默认分组
+            groupService.saveGroup(requestParam.getUsername(), "默认分组");
         } catch (DuplicateKeyException e) {
             throw new ClientException(UserErrorCodeEnum.USER_EXIST);
         } finally {
