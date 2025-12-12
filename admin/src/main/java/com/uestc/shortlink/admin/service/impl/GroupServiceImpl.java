@@ -50,7 +50,6 @@ public class GroupServiceImpl extends ServiceImpl<GroupMapper, GroupDO> implemen
                 .map(groupDO -> ShortLinkGroupRespDTO.builder()
                         .gid(groupDO.getGid())
                         .name(groupDO.getName())
-                        .username(groupDO.getUsername())
                         .sortOrder(groupDO.getSortOrder())
                         .build())
                 .toList();
