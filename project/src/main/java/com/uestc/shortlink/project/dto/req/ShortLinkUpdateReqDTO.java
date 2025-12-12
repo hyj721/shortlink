@@ -7,21 +7,23 @@ import lombok.Data;
 
 import java.util.Date;
 
+/**
+ * 短链接更新请求参数
+ */
 @Data
-@Schema(description = "短链创建请求参数")
-public class ShortLinkCreateReqDTO {
-
-    @Schema(description = "域名")
-    private String domain;
+public class ShortLinkUpdateReqDTO {
 
     @Schema(description = "原始链接")
     private String originUrl;
 
-    @Schema(description = "分组标识")
-    private String gid;
+    @Schema(description = "完整短链接")
+    private String fullShortUrl;
 
-    @Schema(description = "创建方式 0：用户创建 1：系统创建")
-    private Integer createdType;
+    @Schema(description = "原始分组标识（用于查询）")
+    private String originGid;
+
+    @Schema(description = "新分组标识")
+    private String gid;
 
     @Schema(description = "有效期类型 0：永久 1：指定时间")
     private Integer validDateType;
@@ -36,5 +38,4 @@ public class ShortLinkCreateReqDTO {
 
     @Schema(description = "图标")
     private String favicon;
-
 }

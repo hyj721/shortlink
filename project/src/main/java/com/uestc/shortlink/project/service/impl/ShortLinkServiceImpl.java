@@ -2,14 +2,17 @@ package com.uestc.shortlink.project.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.uestc.shortlink.project.common.convention.exception.ClientException;
 import com.uestc.shortlink.project.common.convention.exception.ServiceException;
 import com.uestc.shortlink.project.dao.entity.ShortLinkDO;
 import com.uestc.shortlink.project.dao.mapper.ShortLinkMapper;
 import com.uestc.shortlink.project.dto.req.ShortLinkCreateReqDTO;
 import com.uestc.shortlink.project.dto.req.ShortLinkPageReqDTO;
+import com.uestc.shortlink.project.dto.req.ShortLinkUpdateReqDTO;
 import com.uestc.shortlink.project.dto.resp.ShortLinkCreateRespDTO;
 import com.uestc.shortlink.project.dto.resp.ShortLinkGroupCountResp;
 import com.uestc.shortlink.project.dto.resp.ShortLinkPageRespDTO;
@@ -20,8 +23,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RBloomFilter;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.util.List;
+import java.util.Objects;
+
 
 @Service
 @Slf4j
@@ -45,6 +52,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                 .createdType(requestParam.getCreatedType())
                 .validDateType(requestParam.getValidDateType())
                 .describe(requestParam.getDescribe())
+                .favicon(requestParam.getFavicon())
                 .build();
         try {
             baseMapper.insert(shortLinkDO);
@@ -74,6 +82,65 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
     @Override
     public List<ShortLinkGroupCountResp> listGroupShortLinkCount(List<String> requestParam) {
         return baseMapper.listGroupShortLinkCount(requestParam);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    @Override
+    public void updateShortLink(ShortLinkUpdateReqDTO requestParam) {
+        // 1. 查询数据库中是否存在要修改的短链接
+        LambdaQueryWrapper<ShortLinkDO> queryWrapper = Wrappers.lambdaQuery(ShortLinkDO.class)
+                .eq(ShortLinkDO::getGid, requestParam.getOriginGid())
+                .eq(ShortLinkDO::getFullShortUrl, requestParam.getFullShortUrl())
+                .eq(ShortLinkDO::getDelFlag, 0)
+                .eq(ShortLinkDO::getEnableStatus, 1);
+        ShortLinkDO hasShortLinkDO = baseMapper.selectOne(queryWrapper);
+        if (hasShortLinkDO == null) {
+            throw new ClientException("短链接记录不存在");
+        }
+
+        // 2. 判断是否同组：新gid为空或与原gid相同时视为同组
+        boolean sameGroup = !StringUtils.hasText(requestParam.getGid()) || Objects.equals(hasShortLinkDO.getGid(), requestParam.getGid());
+        if (sameGroup) {
+            // gid相同，直接更新
+            LambdaUpdateWrapper<ShortLinkDO> updateWrapper = Wrappers.lambdaUpdate(ShortLinkDO.class)
+                    .eq(ShortLinkDO::getGid, requestParam.getOriginGid())
+                    .eq(ShortLinkDO::getFullShortUrl, requestParam.getFullShortUrl())
+                    .eq(ShortLinkDO::getDelFlag, 0)
+                    .eq(ShortLinkDO::getEnableStatus, 1)
+                    .set(Objects.nonNull(requestParam.getOriginUrl()), ShortLinkDO::getOriginUrl, requestParam.getOriginUrl())
+                    .set(Objects.nonNull(requestParam.getValidDateType()), ShortLinkDO::getValidDateType, requestParam.getValidDateType())
+                    .set(Objects.nonNull(requestParam.getValidDate()), ShortLinkDO::getValidDate, requestParam.getValidDate())
+                    .set(Objects.nonNull(requestParam.getDescribe()), ShortLinkDO::getDescribe, requestParam.getDescribe())
+                    .set(Objects.nonNull(requestParam.getFavicon()), ShortLinkDO::getFavicon, requestParam.getFavicon());
+            baseMapper.update(null, updateWrapper);
+        } else {
+            // gid不同，需要删除原记录再新增（因为gid是分片键）
+            // 3.1 软删除原记录
+            LambdaUpdateWrapper<ShortLinkDO> deleteWrapper = Wrappers.lambdaUpdate(ShortLinkDO.class)
+                    .eq(ShortLinkDO::getGid, requestParam.getOriginGid())
+                    .eq(ShortLinkDO::getFullShortUrl, requestParam.getFullShortUrl())
+                    .eq(ShortLinkDO::getDelFlag, 0)
+                    .eq(ShortLinkDO::getEnableStatus, 1)
+                    .set(ShortLinkDO::getDelFlag, 1);
+            baseMapper.update(null, deleteWrapper);
+
+            // 3.2 创建新记录
+            ShortLinkDO newShortLinkDO = ShortLinkDO.builder()
+                    .domain(hasShortLinkDO.getDomain())
+                    .shortUri(hasShortLinkDO.getShortUri())
+                    .fullShortUrl(hasShortLinkDO.getFullShortUrl())
+                    .originUrl(requestParam.getOriginUrl() != null ? requestParam.getOriginUrl() : hasShortLinkDO.getOriginUrl())
+                    .clickNum(hasShortLinkDO.getClickNum())
+                    .gid(requestParam.getGid())  // 使用新的gid
+                    .enableStatus(hasShortLinkDO.getEnableStatus())
+                    .createdType(hasShortLinkDO.getCreatedType())
+                    .validDateType(requestParam.getValidDateType() != null ? requestParam.getValidDateType() : hasShortLinkDO.getValidDateType())
+                    .validDate(requestParam.getValidDate() != null ? requestParam.getValidDate() : hasShortLinkDO.getValidDate())
+                    .describe(requestParam.getDescribe() != null ? requestParam.getDescribe() : hasShortLinkDO.getDescribe())
+                    .favicon(requestParam.getFavicon() != null ? requestParam.getFavicon() : hasShortLinkDO.getFavicon())
+                    .build();
+            baseMapper.insert(newShortLinkDO);
+        }
     }
 
     private String generateSuffix(ShortLinkCreateReqDTO requestParam) {

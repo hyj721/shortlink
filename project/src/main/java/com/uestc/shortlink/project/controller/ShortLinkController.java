@@ -5,6 +5,7 @@ import com.uestc.shortlink.project.common.convention.result.Result;
 import com.uestc.shortlink.project.common.convention.result.Results;
 import com.uestc.shortlink.project.dto.req.ShortLinkCreateReqDTO;
 import com.uestc.shortlink.project.dto.req.ShortLinkPageReqDTO;
+import com.uestc.shortlink.project.dto.req.ShortLinkUpdateReqDTO;
 import com.uestc.shortlink.project.dto.resp.ShortLinkCreateRespDTO;
 import com.uestc.shortlink.project.dto.resp.ShortLinkGroupCountResp;
 import com.uestc.shortlink.project.dto.resp.ShortLinkPageRespDTO;
@@ -28,6 +29,13 @@ public class ShortLinkController {
     @PostMapping("/create")
     public Result<ShortLinkCreateRespDTO> createShortLink(@RequestBody ShortLinkCreateReqDTO requestParam) {
         return Results.success(shortLinkService.createShortLink(requestParam));
+    }
+
+    @Operation(summary = "修改短链接")
+    @PutMapping("/update")
+    public Result<Void> updateShortLink(@RequestBody ShortLinkUpdateReqDTO requestParam) {
+        shortLinkService.updateShortLink(requestParam);
+        return Results.success();
     }
 
     @Operation(summary = "分页查询短链接")
