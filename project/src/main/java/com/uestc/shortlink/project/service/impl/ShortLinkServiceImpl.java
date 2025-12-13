@@ -26,6 +26,9 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
 import org.redisson.api.RBloomFilter;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
@@ -35,6 +38,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.net.URL;
 import java.util.Date;
 import java.util.List;
 import java.util.Objects;
@@ -68,7 +72,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                 .createdType(requestParam.getCreatedType())
                 .validDateType(requestParam.getValidDateType())
                 .describe(requestParam.getDescribe())
-                .favicon(requestParam.getFavicon())
+                .favicon(getFavicon(requestParam.getOriginUrl()))
                 .build();
         ShortLinkGotoDO shortLinkGotoDO = ShortLinkGotoDO.builder()
                 .fullShortUrl(fullShortUrl)
@@ -269,5 +273,32 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
             retryCount++;
         }
         return shortUri;
+    }
+
+    @SneakyThrows
+    private String getFavicon(String url) {
+        Document document = Jsoup.connect(url)
+                .timeout(5000)
+                .userAgent("Mozilla/5.0")  // 有些网站需要 UA
+                .get();
+
+        // 按优先级查找
+        String[] selectors = {
+                "link[rel='icon']",
+                "link[rel='shortcut icon']",
+                "link[rel~=(?i)^(shortcut )?icon]",
+                "link[rel='apple-touch-icon']"  // iOS 图标作为备选
+        };
+
+        for (String selector : selectors) {
+            Element link = document.select(selector).first();
+            if (link != null && link.hasAttr("href")) {
+                return link.attr("abs:href");
+            }
+        }
+
+        // 最后尝试默认路径
+        URL targetUrl = new URL(url);
+        return targetUrl.getProtocol() + "://" + targetUrl.getHost() + "/favicon.ico";
     }
 }
