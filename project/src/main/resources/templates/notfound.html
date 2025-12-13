@@ -1,233 +1,349 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
-
 <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>404 Page Not Found | 短链接服务</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
-        rel="stylesheet">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>404 - Resource Not Found</title>
     <style>
+        /* --- 基础重置与变量 --- */
         :root {
-            --bg-color: #f8fafc;
-            --text-primary: #0f172a;
-            --text-secondary: #64748b;
-            --accent-primary: #0f172a;
-            --accent-hover: #334155;
-            --glass-bg: rgba(255, 255, 255, 0.7);
-            --glass-border: rgba(255, 255, 255, 0.5);
-            --glass-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);
+            /* 背景：极简白/灰 */
+            --bg-color: #ffffff;
+            --bg-secondary: #f8fafc; /* Slate 50 */
+
+            /* 文字：高对比度深色 */
+            --text-main: #0f172a; /* Slate 900 */
+            --text-sub: #64748b; /* Slate 500 */
+            --text-code: #475569; /* Slate 600 */
+
+            /* 主色：专业的科技靛蓝 */
+            --primary: #4f46e5; /* Indigo 600 */
+            --primary-hover: #4338ca; /* Indigo 700 */
+            --accent-cyan: #0ea5e9; /* Sky 500 */
+
+            /* 字体栈 */
+            --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+            --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
+            /* 边框颜色 */
+            --border: #e2e8f0; /* Slate 200 */
         }
 
         * {
+            box-sizing: border-box;
             margin: 0;
             padding: 0;
-            box-sizing: border-box;
         }
 
         body {
-            font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
+            font-family: var(--font-sans);
             background-color: var(--bg-color);
-            color: var(--text-primary);
-            min-height: 100vh;
+            color: var(--text-main);
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
             display: flex;
             align-items: center;
             justify-content: center;
-            overflow: hidden;
             position: relative;
         }
 
-        /* Dynamic Mesh Gradient Background */
-        .gradient-bg {
+        /* --- 背景装饰 (工程网格) --- */
+
+        /* 1. 浅色网格背景 */
+        .grid-bg {
             position: absolute;
-            width: 100vw;
-            height: 100vh;
-            overflow: hidden;
-            z-index: -1;
-            background: #f8fafc;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            /* 使用极淡的灰色网格 */
+            background-image:
+                    linear-gradient(rgba(15, 23, 42, 0.03) 1px, transparent 1px),
+                    linear-gradient(90deg, rgba(15, 23, 42, 0.03) 1px, transparent 1px);
+            background-size: 30px 30px;
+            z-index: 0;
+            /* 中间清晰，边缘渐隐 */
+            mask-image: radial-gradient(circle at center, black 60%, transparent 100%);
+            -webkit-mask-image: radial-gradient(circle at center, black 60%, transparent 100%);
         }
 
-        .orb {
+        /* 2. 极淡的氛围光斑 (Clean gradients) */
+        .blob {
             position: absolute;
             border-radius: 50%;
-            filter: blur(80px);
-            opacity: 0.6;
-            animation: float 20s infinite ease-in-out alternate;
+            filter: blur(100px);
+            z-index: 0;
+            opacity: 0.4; /* 亮色模式下透明度稍微高一点点 */
         }
 
-        .orb-1 {
-            width: 60vw;
-            height: 60vw;
-            background: radial-gradient(circle, #bfdbfe 0%, transparent 70%);
-            /* Blue 200 */
+        .blob-1 {
+            background-color: #e0e7ff; /* Indigo 100 */
+            width: 45rem;
+            height: 45rem;
             top: -20%;
             left: -10%;
-            animation-duration: 25s;
         }
 
-        .orb-2 {
-            width: 50vw;
-            height: 50vw;
-            background: radial-gradient(circle, #fed7aa 0%, transparent 70%);
-            /* Orange 200 */
-            bottom: -10%;
+        .blob-2 {
+            background-color: #e0f2fe; /* Sky 100 */
+            width: 40rem;
+            height: 40rem;
+            bottom: -15%;
             right: -10%;
-            animation-direction: alternate-reverse;
-            animation-duration: 30s;
         }
 
-        .orb-3 {
-            width: 40vw;
-            height: 40vw;
-            background: radial-gradient(circle, #e2e8f0 0%, transparent 70%);
-            /* Slate 200 */
-            top: 30%;
-            left: 30%;
-            opacity: 0.4;
-            animation-duration: 20s;
-        }
-
+        /* --- 动画 --- */
         @keyframes float {
-            0% {
-                transform: translate(0, 0) scale(1);
-            }
-
-            33% {
-                transform: translate(30px, -50px) scale(1.1);
-            }
-
-            66% {
-                transform: translate(-20px, 20px) scale(0.9);
-            }
-
-            100% {
-                transform: translate(50px, 50px) scale(1);
-            }
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-8px); }
         }
 
-        /* Glass Card Container */
+        /* --- 内容区域 --- */
         .container {
             position: relative;
-            background: var(--glass-bg);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid var(--glass-border);
-            box-shadow: var(--glass-shadow);
-            border-radius: 32px;
-            padding: 4rem 3rem;
-            max-width: 520px;
-            width: 90%;
-            text-align: center;
             z-index: 10;
-            transition: transform 0.3s ease;
+            max-width: 42rem;
+            padding: 0 1.5rem;
+            text-align: center;
         }
 
-        .container:hover {
-            transform: translateY(-5px);
+        /* 插画 */
+        .illustration-wrapper {
+            margin-bottom: 2rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
 
+        .ghost-svg {
+            width: 10rem;
+            height: 10rem;
+            animation: float 6s ease-in-out infinite;
+            /* 柔和的深色投影，增加立体感 */
+            filter: drop-shadow(0 20px 25px rgba(15, 23, 42, 0.1));
+        }
+
+        /* --- 终端风格错误代码 (亮色版) --- */
         .error-code {
-            font-size: 6rem;
-            font-weight: 800;
-            line-height: 1;
-            color: var(--text-primary);
-            letter-spacing: -0.04em;
-            margin-bottom: 0.5rem;
-            background: linear-gradient(135deg, #0f172a 0%, #334155 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--primary);
+            background: #eef2ff; /* Indigo 50 */
+            padding: 0.35rem 0.75rem;
+            border-radius: 6px;
+            border: 1px solid #c7d2fe; /* Indigo 200 */
+            margin-bottom: 1.5rem;
             display: inline-block;
+            letter-spacing: 0.05em;
         }
 
+        .error-code::before {
+            content: "$ ";
+            color: var(--text-sub);
+            margin-right: 4px;
+        }
+
+        /* 文字 */
         h1 {
-            font-size: 1.5rem;
-            font-weight: 700;
-            margin-bottom: 1rem;
-            color: var(--text-primary);
+            font-size: 3rem;
+            font-weight: 800;
+            margin-bottom: 0.75rem;
+            letter-spacing: -0.03em;
+            color: var(--text-main);
         }
 
-        p {
-            font-size: 1.05rem;
-            color: var(--text-secondary);
+        .desc-wrapper {
             margin-bottom: 2.5rem;
+        }
+
+        .desc {
+            font-size: 1.05rem;
             line-height: 1.6;
+            color: var(--text-sub);
+            max-width: 32rem;
+            margin: 0 auto;
+        }
+
+        /* --- 按钮设计 (SaaS 风格) --- */
+        .btn-wrapper {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
         }
 
         .btn {
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            gap: 0.5rem;
-            width: 100%;
-            padding: 1rem;
-            background-color: var(--accent-primary);
-            color: white;
+            padding: 0.65rem 1.5rem;
+            font-size: 0.9rem;
             font-weight: 600;
-            font-size: 1rem;
             text-decoration: none;
-            border-radius: 16px;
-            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+            border-radius: 6px; /* 典型的 SaaS 小圆角 */
+            transition: all 0.2s ease;
+            font-family: var(--font-sans);
+            cursor: pointer;
         }
 
-        .btn:hover {
-            background-color: var(--accent-hover);
-            transform: scale(1.02);
+        /* 主按钮：实色靛蓝 */
+        .btn-primary {
+            background-color: var(--text-main); /* 使用近乎黑色的 Slate 900，更显极客 */
+            color: white;
+            border: 1px solid transparent;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
         }
 
-        .btn:active {
-            transform: scale(0.98);
+        .btn-primary:hover {
+            background-color: #000000;
+            transform: translateY(-1px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
         }
 
-        /* Soft noise texture overlay */
-        .noise {
-            position: fixed;
-            top: 0;
-            left: 0;
+        /* 次要按钮：描边风格 */
+        .btn-secondary {
+            background-color: white;
+            color: var(--text-main);
+            border: 1px solid var(--border);
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+        }
+
+        .btn-secondary:hover {
+            background-color: var(--bg-secondary);
+            border-color: #cbd5e1; /* Slate 300 */
+        }
+
+        /* 图标 */
+        .btn svg {
+            width: 1.1em;
+            height: 1.1em;
+            margin-right: 0.5em;
+        }
+
+        /* 页脚 - 亮色状态栏 */
+        footer {
+            position: absolute;
+            bottom: 0;
             width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: 100;
-            opacity: 0.03;
-            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+            height: 3rem;
+            border-top: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 2rem;
+            color: var(--text-sub);
+            font-family: var(--font-mono); /* 保持等宽字体 */
+            font-size: 0.75rem;
+            background: #ffffff;
         }
 
-        @media (max-width: 640px) {
-            .container {
-                padding: 3rem 1.5rem;
-            }
-
-            .error-code {
-                font-size: 4.5rem;
-            }
-
-            .orb {
-                filter: blur(60px);
-            }
+        .status-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background-color: #10b981; /* Emerald 500 - 正常的绿色状态灯 */
+            border-radius: 50%;
+            margin-right: 8px;
         }
+
+        .status-text {
+            color: var(--text-main);
+            font-weight: 500;
+        }
+
+        /* 链接风格 */
+        a.footer-link {
+            color: var(--text-sub);
+            text-decoration: none;
+            margin-left: 1.5rem;
+        }
+        a.footer-link:hover {
+            color: var(--primary);
+            text-decoration: underline;
+        }
+
     </style>
 </head>
-
 <body>
-    <div class="noise"></div>
-    <div class="gradient-bg">
-        <div class="orb orb-1"></div>
-        <div class="orb orb-2"></div>
-        <div class="orb orb-3"></div>
+
+<!-- 背景装饰 -->
+<div class="grid-bg"></div>
+<div class="blob blob-1"></div>
+<div class="blob blob-2"></div>
+
+<main class="container">
+
+    <!-- 错误代码提示符 -->
+    <div class="error-code">404_NOT_FOUND</div>
+
+    <!-- 插画 -->
+    <div class="illustration-wrapper">
+        <div class="ghost-svg">
+            <svg viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:100%; height:100%;">
+                <!-- 身体 (纯白 + 深色描边) -->
+                <path d="M100 20C60 20 30 50 30 90V160C30 165.5 34.5 170 40 170C42.5 170 45 169 47 167L58 158L72 168C74 169.5 76.5 170 79 169C82.5 167.5 85 164 85 160V160C85 164 87.5 167.5 91 169C93.5 170 96 169.5 98 168L112 158L123 167C125 169 127.5 170 130 170C135.5 170 140 165.5 140 160V90C140 50 110 20 70 20H100Z" fill="white" stroke="#0f172a" stroke-width="2.5"/>
+
+                <!-- 脸部 (深色) -->
+                <circle cx="65" cy="85" r="8" fill="#0f172a"/>
+                <circle cx="105" cy="85" r="8" fill="#0f172a"/>
+
+                <!-- 腮红 (淡灰色，保持克制) -->
+                <circle cx="55" cy="95" r="5" fill="#cbd5e1" opacity="0.5"/>
+                <circle cx="115" cy="95" r="5" fill="#cbd5e1" opacity="0.5"/>
+
+                <ellipse cx="85" cy="105" rx="6" ry="8" fill="#0f172a"/>
+
+                <!-- 放大镜 (Indigo) -->
+                <g transform="translate(100, 100) rotate(20)">
+                    <!-- 镜框 -->
+                    <circle cx="30" cy="30" r="25" stroke="#4f46e5" stroke-width="5" fill="rgba(255, 255, 255, 0.9)"/>
+                    <!-- 手柄 -->
+                    <line x1="48" y1="48" x2="70" y2="70" stroke="#4f46e5" stroke-width="5" stroke-linecap="round"/>
+                    <!-- 问号 -->
+                    <text x="18" y="42" font-family="ui-monospace, monospace" font-weight="bold" font-size="30" fill="#4f46e5">?</text>
+                </g>
+            </svg>
+        </div>
     </div>
 
-    <div class="container">
-        <div class="error-code">404</div>
-        <h1>页面未找到</h1>
-        <p>
-            我们无法找到该页面。<br>
-            这可能是因为链接已失效，或者地址输入有误。
+    <!-- 文本 -->
+    <h1>页面去哪了?</h1>
+
+    <div class="desc-wrapper">
+        <p class="desc">
+            我们无法解析该短链接。可能是链接已失效、被删除，或者您输入了错误的地址。
         </p>
-        <a href="/" class="btn">
-            返回首页
+    </div>
+
+    <!-- 按钮 -->
+    <div class="btn-wrapper">
+        <!-- 假设开发者后台路径为 /dashboard -->
+        <a href="/dashboard" class="btn btn-primary">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+            <span>Dashboard</span>
+        </a>
+
+        <!-- 假设 API 文档路径为 /docs -->
+        <a href="/docs" class="btn btn-secondary">
+            API 文档 &rarr;
         </a>
     </div>
-</body>
 
+</main>
+
+<!-- 状态栏页脚 -->
+<footer>
+    <div style="display:flex; align-items:center">
+        <span class="status-dot"></span>
+        <span class="status-text">Systems Normal</span>
+    </div>
+    <div>
+        <!-- 右侧链接 -->
+        <a href="/status" class="footer-link">Status</a>
+        <a href="/help" class="footer-link">Help</a>
+    </div>
+</footer>
+
+</body>
 </html>
