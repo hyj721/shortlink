@@ -36,9 +36,9 @@ import org.springframework.util.StringUtils;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.TimeUnit;
 
-import static com.uestc.shortlink.project.common.constant.RedisKeyConstant.GOTO_SHORT_SHORT_LINK_KEY;
-import static com.uestc.shortlink.project.common.constant.RedisKeyConstant.LOCK_GOTO_SHORT_SHORT_LINK_KEY;
+import static com.uestc.shortlink.project.common.constant.RedisKeyConstant.*;
 
 
 @Service
@@ -176,7 +176,13 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
             response.sendRedirect(originalUrl);
             return;
         }
-
+        if (!shortUrlCreateBloomFilter.contains(fullShortUrl)) {
+            return;
+        }
+        // 有空缓存，则直接返回
+        if (StringUtils.hasText(stringRedisTemplate.opsForValue().get(String.format(GOTO_IS_NULL_SHORT_LINK_KEY, fullShortUrl)))) {
+            return;
+        }
 
         RLock lock = redissonClient.getLock(String.format(LOCK_GOTO_SHORT_SHORT_LINK_KEY, fullShortUrl));
         lock.lock();
@@ -185,6 +191,10 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
             originalUrl = stringRedisTemplate.opsForValue().get(String.format(GOTO_SHORT_SHORT_LINK_KEY, fullShortUrl));
             if (StringUtils.hasText(originalUrl)) {
                 response.sendRedirect(originalUrl);
+                return;
+            }
+            // 二次检查空值缓存，避免并发恶意请求重复查库
+            if (StringUtils.hasText(stringRedisTemplate.opsForValue().get(String.format(GOTO_IS_NULL_SHORT_LINK_KEY, fullShortUrl)))) {
                 return;
             }
 
@@ -203,6 +213,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                     .eq(ShortLinkDO::getEnableStatus, 1);
             ShortLinkDO shortLinkDO = baseMapper.selectOne(shortLinkDOLambdaQueryWrapper);
             if (shortLinkDO == null) {
+                stringRedisTemplate.opsForValue().set(String.format(GOTO_IS_NULL_SHORT_LINK_KEY, fullShortUrl), "!!!", 30, TimeUnit.MINUTES);
                 return;
             }
             stringRedisTemplate.opsForValue().set(String.format(GOTO_SHORT_SHORT_LINK_KEY, fullShortUrl), shortLinkDO.getOriginUrl());
