@@ -9,6 +9,10 @@ spring:
       host: 127.0.0.1
       port: 6379
       password: redis
+  mvc:
+    view:
+      prefix: /templates/
+      suffix: .html
 server:
   port: 8001
 
