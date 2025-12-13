@@ -30,7 +30,7 @@ public class ShortLinkRedirectController {
             summary = "短链接跳转",
             description = "根据短链接标识恢复并重定向到原始长链接"
     )
-    @GetMapping("/{short-uri}")
+    @GetMapping("/{short-uri:[a-zA-Z0-9]+}")
     public void restoreLongLink(
             @PathVariable("short-uri") String shortUri,
             HttpServletRequest request,
