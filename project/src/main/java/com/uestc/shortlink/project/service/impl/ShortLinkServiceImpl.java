@@ -20,6 +20,7 @@ import com.uestc.shortlink.project.dto.resp.ShortLinkGroupCountResp;
 import com.uestc.shortlink.project.dto.resp.ShortLinkPageRespDTO;
 import com.uestc.shortlink.project.service.ShortLinkService;
 import com.uestc.shortlink.project.util.HashUtil;
+import com.uestc.shortlink.project.util.LinkUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -80,6 +81,13 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
             throw new ServiceException(String.format("短链接：%s 生成重复", fullShortUrl));
         }
         shortUrlCreateBloomFilter.add(fullShortUrl);
+        // 缓存预热：创建短链接时直接写入 Redis
+        stringRedisTemplate.opsForValue().set(
+                String.format(GOTO_SHORT_SHORT_LINK_KEY, fullShortUrl),
+                requestParam.getOriginUrl(),
+                LinkUtil.getLinkCacheValidTime(requestParam.getValidDate()),
+                TimeUnit.MILLISECONDS
+        );
         return ShortLinkCreateRespDTO.builder()
                 .gid(requestParam.getGid())
                 .originUrl(requestParam.getOriginUrl())
