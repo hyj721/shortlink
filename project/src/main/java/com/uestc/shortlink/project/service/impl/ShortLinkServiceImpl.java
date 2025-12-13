@@ -26,13 +26,19 @@ import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RBloomFilter;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
 import org.springframework.dao.DuplicateKeyException;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.util.List;
 import java.util.Objects;
+
+import static com.uestc.shortlink.project.common.constant.RedisKeyConstant.GOTO_SHORT_SHORT_LINK_KEY;
+import static com.uestc.shortlink.project.common.constant.RedisKeyConstant.LOCK_GOTO_SHORT_SHORT_LINK_KEY;
 
 
 @Service
@@ -42,6 +48,8 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
 
     private final RBloomFilter<String> shortUrlCreateBloomFilter;
     private final ShortLinkGotoMapper shortLinkGotoMapper;
+    private final StringRedisTemplate stringRedisTemplate;
+    private final RedissonClient redissonClient;
 
     @Override
     public ShortLinkCreateRespDTO createShortLink(ShortLinkCreateReqDTO requestParam) {
@@ -154,30 +162,55 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
         }
     }
 
+    /**
+     * 短链接跳转：用户只传短链接，不知道 gid。而 t_link 按 gid 分表，需先查路由表 t_link_goto 获取 gid，再查 t_link 分表。
+     */
     @Override
     @SneakyThrows
     public void restoreLongLink(String shortUri, HttpServletRequest request, HttpServletResponse response) {
-        // 1.先从路由表获取到完整短链接对应的gid
         String serverName = request.getServerName();
         String fullShortUrl = serverName + "/" + shortUri;
-        LambdaQueryWrapper<ShortLinkGotoDO> queryWrapper = Wrappers.lambdaQuery(ShortLinkGotoDO.class)
-                .eq(ShortLinkGotoDO::getFullShortUrl, fullShortUrl);
-        ShortLinkGotoDO shortLinkGotoDO = shortLinkGotoMapper.selectOne(queryWrapper);
-        if (shortLinkGotoDO == null) {
+        String originalUrl = stringRedisTemplate.opsForValue().get(String.format(GOTO_SHORT_SHORT_LINK_KEY, fullShortUrl));
+        // 如果原始链接不为空，则直接返回；否则查询数据库
+        if (StringUtils.hasText(originalUrl)) {
+            response.sendRedirect(originalUrl);
             return;
         }
-        String gid = shortLinkGotoDO.getGid();
-        // 2.根据gid分表条件，查询到对应的短链接实体
-        LambdaQueryWrapper<ShortLinkDO> shortLinkDOLambdaQueryWrapper = Wrappers.lambdaQuery(ShortLinkDO.class)
-                .eq(ShortLinkDO::getGid, gid)
-                .eq(ShortLinkDO::getFullShortUrl, fullShortUrl)
-                .eq(ShortLinkDO::getDelFlag, 0)
-                .eq(ShortLinkDO::getEnableStatus, 1);
-        ShortLinkDO shortLinkDO = baseMapper.selectOne(shortLinkDOLambdaQueryWrapper);
-        if (shortLinkDO == null) {
-            return;
+
+
+        RLock lock = redissonClient.getLock(String.format(LOCK_GOTO_SHORT_SHORT_LINK_KEY, fullShortUrl));
+        lock.lock();
+        try {
+            // 二次检查是否有其他线程提前抢到redisson锁并建立好了缓存
+            originalUrl = stringRedisTemplate.opsForValue().get(String.format(GOTO_SHORT_SHORT_LINK_KEY, fullShortUrl));
+            if (StringUtils.hasText(originalUrl)) {
+                response.sendRedirect(originalUrl);
+                return;
+            }
+
+            LambdaQueryWrapper<ShortLinkGotoDO> queryWrapper = Wrappers.lambdaQuery(ShortLinkGotoDO.class)
+                    .eq(ShortLinkGotoDO::getFullShortUrl, fullShortUrl);
+            ShortLinkGotoDO shortLinkGotoDO = shortLinkGotoMapper.selectOne(queryWrapper);
+            if (shortLinkGotoDO == null) {
+                return;
+            }
+            String gid = shortLinkGotoDO.getGid();
+            // 用 gid 定位分表，查 t_link 获取 origin_url
+            LambdaQueryWrapper<ShortLinkDO> shortLinkDOLambdaQueryWrapper = Wrappers.lambdaQuery(ShortLinkDO.class)
+                    .eq(ShortLinkDO::getGid, gid)
+                    .eq(ShortLinkDO::getFullShortUrl, fullShortUrl)
+                    .eq(ShortLinkDO::getDelFlag, 0)
+                    .eq(ShortLinkDO::getEnableStatus, 1);
+            ShortLinkDO shortLinkDO = baseMapper.selectOne(shortLinkDOLambdaQueryWrapper);
+            if (shortLinkDO == null) {
+                return;
+            }
+            stringRedisTemplate.opsForValue().set(String.format(GOTO_SHORT_SHORT_LINK_KEY, fullShortUrl), shortLinkDO.getOriginUrl());
+            response.sendRedirect(shortLinkDO.getOriginUrl());
+        } finally {
+            lock.unlock();
         }
-        response.sendRedirect(shortLinkDO.getOriginUrl());
+
     }
 
     private String generateSuffix(ShortLinkCreateReqDTO requestParam) {
