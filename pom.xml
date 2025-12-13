@@ -32,6 +32,7 @@
         <knife4j-openapi3-jakarta-spring-boot-starter.version>4.5.0
         </knife4j-openapi3-jakarta-spring-boot-starter.version>
         <satoken.version>1.44.0</satoken.version>
+        <jsoup.version>1.17.2</jsoup.version>
     </properties>
 
     <dependencies>
@@ -131,6 +132,12 @@
                 <groupId>cn.dev33</groupId>
                 <artifactId>sa-token-redis-template</artifactId>
                 <version>${satoken.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.jsoup</groupId>
+                <artifactId>jsoup</artifactId>
+                <version>${jsoup.version}</version>
             </dependency>
 
         </dependencies>
