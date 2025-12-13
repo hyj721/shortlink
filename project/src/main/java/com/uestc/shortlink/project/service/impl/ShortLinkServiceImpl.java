@@ -9,6 +9,8 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.uestc.shortlink.project.common.convention.exception.ClientException;
 import com.uestc.shortlink.project.common.convention.exception.ServiceException;
 import com.uestc.shortlink.project.dao.entity.ShortLinkDO;
+import com.uestc.shortlink.project.dao.entity.ShortLinkGotoDO;
+import com.uestc.shortlink.project.dao.mapper.ShortLinkGotoMapper;
 import com.uestc.shortlink.project.dao.mapper.ShortLinkMapper;
 import com.uestc.shortlink.project.dto.req.ShortLinkCreateReqDTO;
 import com.uestc.shortlink.project.dto.req.ShortLinkPageReqDTO;
@@ -18,7 +20,10 @@ import com.uestc.shortlink.project.dto.resp.ShortLinkGroupCountResp;
 import com.uestc.shortlink.project.dto.resp.ShortLinkPageRespDTO;
 import com.uestc.shortlink.project.service.ShortLinkService;
 import com.uestc.shortlink.project.util.HashUtil;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RBloomFilter;
 import org.springframework.dao.DuplicateKeyException;
@@ -36,6 +41,7 @@ import java.util.Objects;
 public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLinkDO> implements ShortLinkService {
 
     private final RBloomFilter<String> shortUrlCreateBloomFilter;
+    private final ShortLinkGotoMapper shortLinkGotoMapper;
 
     @Override
     public ShortLinkCreateRespDTO createShortLink(ShortLinkCreateReqDTO requestParam) {
@@ -54,8 +60,13 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                 .describe(requestParam.getDescribe())
                 .favicon(requestParam.getFavicon())
                 .build();
+        ShortLinkGotoDO shortLinkGotoDO = ShortLinkGotoDO.builder()
+                .fullShortUrl(fullShortUrl)
+                .gid(requestParam.getGid())
+                .build();
         try {
             baseMapper.insert(shortLinkDO);
+            shortLinkGotoMapper.insert(shortLinkGotoDO);
         } catch (DuplicateKeyException e) {
             log.warn("短链接{}重复入库", fullShortUrl);
             throw new ServiceException(String.format("短链接：%s 生成重复", fullShortUrl));
@@ -141,6 +152,32 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                     .build();
             baseMapper.insert(newShortLinkDO);
         }
+    }
+
+    @Override
+    @SneakyThrows
+    public void restoreLongLink(String shortUri, HttpServletRequest request, HttpServletResponse response) {
+        // 1.先从路由表获取到完整短链接对应的gid
+        String serverName = request.getServerName();
+        String fullShortUrl = serverName + "/" + shortUri;
+        LambdaQueryWrapper<ShortLinkGotoDO> queryWrapper = Wrappers.lambdaQuery(ShortLinkGotoDO.class)
+                .eq(ShortLinkGotoDO::getFullShortUrl, fullShortUrl);
+        ShortLinkGotoDO shortLinkGotoDO = shortLinkGotoMapper.selectOne(queryWrapper);
+        if (shortLinkGotoDO == null) {
+            return;
+        }
+        String gid = shortLinkGotoDO.getGid();
+        // 2.根据gid分表条件，查询到对应的短链接实体
+        LambdaQueryWrapper<ShortLinkDO> shortLinkDOLambdaQueryWrapper = Wrappers.lambdaQuery(ShortLinkDO.class)
+                .eq(ShortLinkDO::getGid, gid)
+                .eq(ShortLinkDO::getFullShortUrl, fullShortUrl)
+                .eq(ShortLinkDO::getDelFlag, 0)
+                .eq(ShortLinkDO::getEnableStatus, 1);
+        ShortLinkDO shortLinkDO = baseMapper.selectOne(shortLinkDOLambdaQueryWrapper);
+        if (shortLinkDO == null) {
+            return;
+        }
+        response.sendRedirect(shortLinkDO.getOriginUrl());
     }
 
     private String generateSuffix(ShortLinkCreateReqDTO requestParam) {

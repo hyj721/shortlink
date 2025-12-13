@@ -9,6 +9,8 @@ import com.uestc.shortlink.project.dto.req.ShortLinkUpdateReqDTO;
 import com.uestc.shortlink.project.dto.resp.ShortLinkCreateRespDTO;
 import com.uestc.shortlink.project.dto.resp.ShortLinkGroupCountResp;
 import com.uestc.shortlink.project.dto.resp.ShortLinkPageRespDTO;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 import java.util.List;
 
@@ -37,4 +39,10 @@ public interface ShortLinkService extends IService<ShortLinkDO> {
      *
      */
     void updateShortLink(ShortLinkUpdateReqDTO requestParam);
+
+    /**
+     * 根据短链接恢复长链接
+     *
+     */
+    void restoreLongLink(String shortUri, HttpServletRequest request, HttpServletResponse response);
 }
