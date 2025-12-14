@@ -36,7 +36,7 @@ public class RecycleBinController {
 
     @Operation(summary = "恢复回收站短链接")
     @PostMapping("/recover")
-    public Result<Void> recoverShortLink(RecycleBinRecoverReqDTO requestParam) {
+    public Result<Void> recoverShortLink(@RequestBody RecycleBinRecoverReqDTO requestParam) {
         recycleBinService.recoverShortLink(requestParam);
         return Results.success();
     }

@@ -37,7 +37,8 @@ public class RecycleBinServiceImpl extends ServiceImpl<RecycleBinMapper, ShortLi
     public void saveRecycleBin(RecycleBinSaveReqDTO requestParam) {
         LambdaUpdateWrapper<ShortLinkDO> updateWrapper = Wrappers.lambdaUpdate(ShortLinkDO.class)
                 .eq(ShortLinkDO::getFullShortUrl, requestParam.getFullShortUrl())
-                .eq(ShortLinkDO::getGid, requestParam.getGid()).eq(ShortLinkDO::getEnableStatus, 1)
+                .eq(ShortLinkDO::getGid, requestParam.getGid())
+                .eq(ShortLinkDO::getEnableStatus, 1)
                 .eq(ShortLinkDO::getDelFlag, 0)
                 .set(ShortLinkDO::getEnableStatus, 0);  // 将启用状态设为禁用
         baseMapper.update(null, updateWrapper);
@@ -63,7 +64,8 @@ public class RecycleBinServiceImpl extends ServiceImpl<RecycleBinMapper, ShortLi
     public void recoverShortLink(RecycleBinRecoverReqDTO requestParam) {
         LambdaUpdateWrapper<ShortLinkDO> updateWrapper = Wrappers.lambdaUpdate(ShortLinkDO.class)
                 .eq(ShortLinkDO::getFullShortUrl, requestParam.getFullShortUrl())
-                .eq(ShortLinkDO::getGid, requestParam.getGid()).eq(ShortLinkDO::getEnableStatus, 1)
+                .eq(ShortLinkDO::getGid, requestParam.getGid())
+                .eq(ShortLinkDO::getEnableStatus, 0)
                 .eq(ShortLinkDO::getDelFlag, 0)
                 .set(ShortLinkDO::getEnableStatus, 1);  // 将启用状态设为启用
         baseMapper.update(null, updateWrapper);
