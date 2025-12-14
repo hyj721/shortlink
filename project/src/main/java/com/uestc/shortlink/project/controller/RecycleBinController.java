@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.uestc.shortlink.project.common.convention.result.Result;
 import com.uestc.shortlink.project.common.convention.result.Results;
 import com.uestc.shortlink.project.dto.req.RecycleBinSaveReqDTO;
-import com.uestc.shortlink.project.dto.req.ShortLinkPageReqDTO;
+import com.uestc.shortlink.project.dto.req.ShortLinkRecycleBinPageReqDTO;
 import com.uestc.shortlink.project.dto.resp.ShortLinkPageRespDTO;
 import com.uestc.shortlink.project.service.RecycleBinService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -29,7 +29,7 @@ public class RecycleBinController {
 
     @Operation(summary = "分页查询回收站短链接")
     @GetMapping("/page")
-    public Result<IPage<ShortLinkPageRespDTO>> pageShortLink(ShortLinkPageReqDTO requestParam) {
+    public Result<IPage<ShortLinkPageRespDTO>> pageShortLink(ShortLinkRecycleBinPageReqDTO requestParam) {
         return Results.success(recycleBinService.pageShortLink(requestParam));
     }
 

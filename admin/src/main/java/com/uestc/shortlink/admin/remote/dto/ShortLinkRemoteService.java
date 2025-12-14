@@ -9,6 +9,7 @@ import com.uestc.shortlink.admin.dto.req.ShortLinkUpdateReqDTO;
 import com.uestc.shortlink.admin.remote.dto.req.RecycleBinSaveReqDTO;
 import com.uestc.shortlink.admin.remote.dto.req.ShortLinkCreateReqDTO;
 import com.uestc.shortlink.admin.remote.dto.req.ShortLinkPageReqDTO;
+import com.uestc.shortlink.admin.remote.dto.req.ShortLinkRecycleBinPageReqDTO;
 import com.uestc.shortlink.admin.remote.dto.resp.ShortLinkCreateRespDTO;
 import com.uestc.shortlink.admin.remote.dto.resp.ShortLinkGroupCountResp;
 import com.uestc.shortlink.admin.remote.dto.resp.ShortLinkPageRespDTO;
@@ -101,11 +102,11 @@ public interface ShortLinkRemoteService {
      * @param requestParam 分页短链接请求参数
      * @return 查询短链接响应
      */
-    default Result<IPage<ShortLinkPageRespDTO>> pageRecycleBinShortLink(ShortLinkPageReqDTO requestParam) {
+    default Result<IPage<ShortLinkPageRespDTO>> pageRecycleBinShortLink(ShortLinkRecycleBinPageReqDTO requestParam) {
         Map<String, Object> requestMap = new HashMap<>();
-        requestMap.put("gid", requestParam.getGid());
         requestMap.put("current", requestParam.getCurrent());
         requestMap.put("size", requestParam.getSize());
+        requestMap.put("gidList", requestParam.getGidList());
         String resultPageStr = HttpUtil.get("http://127.0.0.1:8001/api/short-link/v1/recycle-bin/page", requestMap);
         return JSON.parseObject(resultPageStr, new TypeReference<>() {
         });

@@ -5,8 +5,9 @@ import com.uestc.shortlink.admin.common.convention.result.Result;
 import com.uestc.shortlink.admin.common.convention.result.Results;
 import com.uestc.shortlink.admin.remote.dto.ShortLinkRemoteService;
 import com.uestc.shortlink.admin.remote.dto.req.RecycleBinSaveReqDTO;
-import com.uestc.shortlink.admin.remote.dto.req.ShortLinkPageReqDTO;
+import com.uestc.shortlink.admin.remote.dto.req.ShortLinkRecycleBinPageReqDTO;
 import com.uestc.shortlink.admin.remote.dto.resp.ShortLinkPageRespDTO;
+import com.uestc.shortlink.admin.service.RecycleBinService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +25,8 @@ public class RecycleBinController {
     ShortLinkRemoteService shortLinkRemoteService = new ShortLinkRemoteService() {
     };
 
+    private final RecycleBinService recycleBinService;
+
     /**
      * 保存回收站
      */
@@ -36,7 +39,7 @@ public class RecycleBinController {
 
     @Operation(summary = "分页查询回收站短链接")
     @GetMapping("/page")
-    public Result<IPage<ShortLinkPageRespDTO>> pageShortLink(ShortLinkPageReqDTO requestParam) {
-        return shortLinkRemoteService.pageShortLink(requestParam);
+    public Result<IPage<ShortLinkPageRespDTO>> pageShortLink(ShortLinkRecycleBinPageReqDTO requestParam) {
+        return recycleBinService.pageRecycleBinShortLink(requestParam);
     }
 }
