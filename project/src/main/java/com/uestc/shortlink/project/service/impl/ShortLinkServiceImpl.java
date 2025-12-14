@@ -281,6 +281,8 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
             }
             // 统计 UV
             int uv = statsUv(fullShortUrl, request, response);
+            // 统计 UIP
+            int uip = statsUip(fullShortUrl, request);
             // 获取当前时间信息
             LocalDateTime now = LocalDateTime.now();
             LinkAccessStatsDO linkAccessStatsDO = LinkAccessStatsDO.builder()
@@ -289,7 +291,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                     .date(Date.from(now.toLocalDate().atStartOfDay(ZoneId.systemDefault()).toInstant()))
                     .pv(1)
                     .uv(uv)
-                    .uip(0)
+                    .uip(uip)
                     .hour(now.getHour())
                     .weekday(now.getDayOfWeek().getValue())
                     .build();
@@ -365,6 +367,21 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
 
         // 3. SADD 返回 > 0 表示新访客
         Long added = stringRedisTemplate.opsForSet().add(uvKey, uvValue);
+        return (added != null && added > 0) ? 1 : 0;
+    }
+
+    /**
+     * 统计 UIP（独立 IP）
+     * <p>
+     * 使用 Redis Set 记录每个短链接的访问 IP，SADD 返回值判断是否为新 IP。
+     *
+     * @return 1 表示新 IP，0 表示已访问过的 IP
+     */
+    private int statsUip(String fullShortUrl, HttpServletRequest request) {
+        String uipKey = String.format(SHORT_LINK_STATS_UIP_KEY, fullShortUrl);
+        String clientIp = LinkUtil.getClientIp(request);
+
+        Long added = stringRedisTemplate.opsForSet().add(uipKey, clientIp);
         return (added != null && added > 0) ? 1 : 0;
     }
 
