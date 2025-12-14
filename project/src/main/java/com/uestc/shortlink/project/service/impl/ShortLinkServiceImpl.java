@@ -8,8 +8,10 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.uestc.shortlink.project.common.convention.exception.ClientException;
 import com.uestc.shortlink.project.common.convention.exception.ServiceException;
+import com.uestc.shortlink.project.dao.entity.LinkAccessStatsDO;
 import com.uestc.shortlink.project.dao.entity.ShortLinkDO;
 import com.uestc.shortlink.project.dao.entity.ShortLinkGotoDO;
+import com.uestc.shortlink.project.dao.mapper.LinkAccessStatsMapper;
 import com.uestc.shortlink.project.dao.mapper.ShortLinkGotoMapper;
 import com.uestc.shortlink.project.dao.mapper.ShortLinkMapper;
 import com.uestc.shortlink.project.dto.req.ShortLinkCreateReqDTO;
@@ -39,6 +41,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.net.URL;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Date;
 import java.util.List;
 import java.util.Objects;
@@ -56,6 +60,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
     private final ShortLinkGotoMapper shortLinkGotoMapper;
     private final StringRedisTemplate stringRedisTemplate;
     private final RedissonClient redissonClient;
+    private final LinkAccessStatsMapper linkAccessStatsMapper;
 
     @Override
     public ShortLinkCreateRespDTO createShortLink(ShortLinkCreateReqDTO requestParam) {
@@ -191,6 +196,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
         // 根据短链接获取原始链接，若原始链接不为空，则直接返回；否则查询数据库
         if (StringUtils.hasText(originalUrl)) {
             response.sendRedirect(originalUrl);
+            shortLinkStats(fullShortUrl, null, request, response);
             return;
         }
         if (!shortUrlCreateBloomFilter.contains(fullShortUrl)) {
@@ -210,6 +216,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
             originalUrl = stringRedisTemplate.opsForValue().get(String.format(GOTO_SHORT_SHORT_LINK_KEY, fullShortUrl));
             if (StringUtils.hasText(originalUrl)) {
                 response.sendRedirect(originalUrl);
+                shortLinkStats(fullShortUrl, null, request, response);
                 return;
             }
             // 二次检查空值缓存，避免并发恶意请求重复查库
@@ -253,11 +260,42 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                     LinkUtil.getLinkCacheValidTime(shortLinkDO.getValidDate()),
                     TimeUnit.MILLISECONDS
             );
+            shortLinkStats(fullShortUrl, gid, request, response);
             response.sendRedirect(shortLinkDO.getOriginUrl());
         } finally {
             lock.unlock();
         }
 
+    }
+
+    private void shortLinkStats(String fullShortUrl, String gid,
+                                HttpServletRequest request, HttpServletResponse response) {
+        try {
+            if (!StringUtils.hasText(gid)) {
+                LambdaQueryWrapper<ShortLinkGotoDO> queryWrapper = Wrappers.lambdaQuery(ShortLinkGotoDO.class)
+                        .eq(ShortLinkGotoDO::getFullShortUrl, fullShortUrl);
+                ShortLinkGotoDO shortLinkGotoDO = shortLinkGotoMapper.selectOne(queryWrapper);
+                gid = shortLinkGotoDO.getGid();
+            }
+            // 获取当前时间信息
+            LocalDateTime now = LocalDateTime.now();
+            int hour = now.getHour();  // 0-23
+            int weekday = now.getDayOfWeek().getValue();  // 1=周一, 7=周日
+
+            LinkAccessStatsDO linkAccessStatsDO = LinkAccessStatsDO.builder()
+                    .gid(gid)
+                    .fullShortUrl(fullShortUrl)
+                    .date(Date.from(now.toLocalDate().atStartOfDay(ZoneId.systemDefault()).toInstant()))
+                    .pv(1)
+                    .uv(0)
+                    .uip(0)
+                    .hour(hour)
+                    .weekday(weekday)
+                    .build();
+            linkAccessStatsMapper.shortLinkAccessStats(linkAccessStatsDO);
+        } catch (Exception e) {
+            log.error("短链接访问量统计异常", e);
+        }
     }
 
     private String generateSuffix(ShortLinkCreateReqDTO requestParam) {
