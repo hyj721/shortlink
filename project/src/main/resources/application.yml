@@ -37,3 +37,7 @@ knife4j:
 mybatis-plus:
   global-config:
     banner: false
+    db-config:
+      logic-delete-field: delFlag
+      logic-delete-value: 1
+      logic-not-delete-value: 0

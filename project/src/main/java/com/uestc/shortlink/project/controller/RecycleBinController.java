@@ -3,6 +3,7 @@ package com.uestc.shortlink.project.controller;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.uestc.shortlink.project.common.convention.result.Result;
 import com.uestc.shortlink.project.common.convention.result.Results;
+import com.uestc.shortlink.project.dto.req.RecycleBinDeleteReqDTO;
 import com.uestc.shortlink.project.dto.req.RecycleBinRecoverReqDTO;
 import com.uestc.shortlink.project.dto.req.RecycleBinSaveReqDTO;
 import com.uestc.shortlink.project.dto.req.ShortLinkRecycleBinPageReqDTO;
@@ -38,6 +39,13 @@ public class RecycleBinController {
     @PostMapping("/recover")
     public Result<Void> recoverShortLink(@RequestBody RecycleBinRecoverReqDTO requestParam) {
         recycleBinService.recoverShortLink(requestParam);
+        return Results.success();
+    }
+
+    @Operation(summary = "从回收站删除短链接")
+    @PostMapping("/remove")
+    public Result<Void> removeShortLink(@RequestBody RecycleBinDeleteReqDTO requestParam) {
+        recycleBinService.removeShortLink(requestParam);
         return Results.success();
     }
 
