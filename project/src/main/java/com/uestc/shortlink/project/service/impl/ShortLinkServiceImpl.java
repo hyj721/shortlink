@@ -340,7 +340,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
      * @return 1 表示新访客，0 表示老访客
      */
     private int statsUv(String fullShortUrl, HttpServletRequest request, HttpServletResponse response) {
-        String uvKey = "short-link:stats:uv:" + fullShortUrl;
+        String uvKey = String.format(SHORT_LINK_STATS_UV_KEY, fullShortUrl);
         String uvValue = null;
 
         // 1. 尝试从 Cookie 中获取 uv 值
