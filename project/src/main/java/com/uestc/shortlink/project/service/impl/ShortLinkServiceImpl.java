@@ -23,6 +23,7 @@ import com.uestc.shortlink.project.dto.resp.ShortLinkPageRespDTO;
 import com.uestc.shortlink.project.service.ShortLinkService;
 import com.uestc.shortlink.project.util.HashUtil;
 import com.uestc.shortlink.project.util.LinkUtil;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -46,6 +47,7 @@ import java.time.ZoneId;
 import java.util.Date;
 import java.util.List;
 import java.util.Objects;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import static com.uestc.shortlink.project.common.constant.RedisKeyConstant.*;
@@ -195,8 +197,8 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
         String originalUrl = stringRedisTemplate.opsForValue().get(String.format(GOTO_SHORT_SHORT_LINK_KEY, fullShortUrl));
         // 根据短链接获取原始链接，若原始链接不为空，则直接返回；否则查询数据库
         if (StringUtils.hasText(originalUrl)) {
-            response.sendRedirect(originalUrl);
             shortLinkStats(fullShortUrl, null, request, response);
+            response.sendRedirect(originalUrl);
             return;
         }
         if (!shortUrlCreateBloomFilter.contains(fullShortUrl)) {
@@ -215,8 +217,8 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
             // 二次检查是否有其他线程提前抢到redisson锁并建立好了缓存
             originalUrl = stringRedisTemplate.opsForValue().get(String.format(GOTO_SHORT_SHORT_LINK_KEY, fullShortUrl));
             if (StringUtils.hasText(originalUrl)) {
-                response.sendRedirect(originalUrl);
                 shortLinkStats(fullShortUrl, null, request, response);
+                response.sendRedirect(originalUrl);
                 return;
             }
             // 二次检查空值缓存，避免并发恶意请求重复查库
@@ -277,25 +279,93 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                 ShortLinkGotoDO shortLinkGotoDO = shortLinkGotoMapper.selectOne(queryWrapper);
                 gid = shortLinkGotoDO.getGid();
             }
+            // 统计 UV
+            int uv = statsUv(fullShortUrl, request, response);
             // 获取当前时间信息
             LocalDateTime now = LocalDateTime.now();
-            int hour = now.getHour();  // 0-23
-            int weekday = now.getDayOfWeek().getValue();  // 1=周一, 7=周日
-
             LinkAccessStatsDO linkAccessStatsDO = LinkAccessStatsDO.builder()
                     .gid(gid)
                     .fullShortUrl(fullShortUrl)
                     .date(Date.from(now.toLocalDate().atStartOfDay(ZoneId.systemDefault()).toInstant()))
                     .pv(1)
-                    .uv(0)
+                    .uv(uv)
                     .uip(0)
-                    .hour(hour)
-                    .weekday(weekday)
+                    .hour(now.getHour())
+                    .weekday(now.getDayOfWeek().getValue())
                     .build();
             linkAccessStatsMapper.shortLinkAccessStats(linkAccessStatsDO);
         } catch (Exception e) {
             log.error("短链接访问量统计异常", e);
         }
+    }
+
+    /**
+     * 统计 UV（独立访客）
+     * <pre>
+     * 流程图：
+     * ┌─────────────────────────────────────────┐
+     * │           用户访问短链接                  │
+     * └─────────────────────────────────────────┘
+     *                     │
+     *                     ▼
+     *          ┌─────────────────────┐
+     *          │  获取 Cookie 列表    │
+     *          │  查找 "uv" Cookie    │
+     *          └─────────────────────┘
+     *                     │
+     *        ┌────────────┴────────────┐
+     *        │ 有                      │ 无
+     *        ▼                         ▼
+     * ┌─────────────┐         ┌─────────────────────┐
+     * │ uvValue =   │         │ 生成新 UUID          │
+     * │ cookie值    │         │ 创建 Cookie 并设置    │
+     * └─────────────┘         │ path & maxAge       │
+     *        │                │ 添加到 Response      │
+     *        │                └─────────────────────┘
+     *        │                         │
+     *        └────────────┬────────────┘
+     *                     ▼
+     *          ┌─────────────────────┐
+     *          │ Redis SADD(key, uv) │
+     *          └─────────────────────┘
+     *                     │
+     *        ┌────────────┴────────────┐
+     *        │ 返回 > 0               │ 返回 = 0
+     *        ▼                         ▼
+     *   ┌─────────┐              ┌─────────┐
+     *   │ 新访客   │              │ 老访客   │
+     *   │ return 1│              │ return 0│
+     *   └─────────┘              └─────────┘
+     * </pre>
+     * @return 1 表示新访客，0 表示老访客
+     */
+    private int statsUv(String fullShortUrl, HttpServletRequest request, HttpServletResponse response) {
+        String uvKey = "short-link:stats:uv:" + fullShortUrl;
+        String uvValue = null;
+
+        // 1. 尝试从 Cookie 中获取 uv 值
+        Cookie[] cookies = request.getCookies();
+        if (cookies != null) {
+            for (Cookie cookie : cookies) {
+                if ("uv".equals(cookie.getName())) {
+                    uvValue = cookie.getValue();
+                    break;
+                }
+            }
+        }
+
+        // 2. 没有 uv Cookie 则创建新的
+        if (uvValue == null) {
+            uvValue = UUID.randomUUID().toString();
+            Cookie uvCookie = new Cookie("uv", uvValue);
+            uvCookie.setMaxAge(60 * 60 * 24 * 30);  // 30 天有效期
+            uvCookie.setPath(request.getRequestURI());
+            response.addCookie(uvCookie);
+        }
+
+        // 3. SADD 返回 > 0 表示新访客
+        Long added = stringRedisTemplate.opsForSet().add(uvKey, uvValue);
+        return (added != null && added > 0) ? 1 : 0;
     }
 
     private String generateSuffix(ShortLinkCreateReqDTO requestParam) {
