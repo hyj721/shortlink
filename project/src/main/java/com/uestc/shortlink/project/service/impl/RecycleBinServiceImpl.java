@@ -8,6 +8,7 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.uestc.shortlink.project.dao.entity.ShortLinkDO;
 import com.uestc.shortlink.project.dao.mapper.RecycleBinMapper;
+import com.uestc.shortlink.project.dto.req.RecycleBinRecoverReqDTO;
 import com.uestc.shortlink.project.dto.req.RecycleBinSaveReqDTO;
 import com.uestc.shortlink.project.dto.req.ShortLinkRecycleBinPageReqDTO;
 import com.uestc.shortlink.project.dto.resp.ShortLinkPageRespDTO;
@@ -16,6 +17,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
+import static com.uestc.shortlink.project.common.constant.RedisKeyConstant.GOTO_IS_NULL_SHORT_LINK_KEY;
 import static com.uestc.shortlink.project.common.constant.RedisKeyConstant.GOTO_SHORT_SHORT_LINK_KEY;
 
 /**
@@ -55,5 +57,18 @@ public class RecycleBinServiceImpl extends ServiceImpl<RecycleBinMapper, ShortLi
         return resultPage.convert(each -> {
             return BeanUtil.toBean(each, ShortLinkPageRespDTO.class);
         });
+    }
+
+    @Override
+    public void recoverShortLink(RecycleBinRecoverReqDTO requestParam) {
+        LambdaUpdateWrapper<ShortLinkDO> updateWrapper = Wrappers.lambdaUpdate(ShortLinkDO.class)
+                .eq(ShortLinkDO::getFullShortUrl, requestParam.getFullShortUrl())
+                .eq(ShortLinkDO::getGid, requestParam.getGid()).eq(ShortLinkDO::getEnableStatus, 1)
+                .eq(ShortLinkDO::getDelFlag, 0)
+                .set(ShortLinkDO::getEnableStatus, 1);  // 将启用状态设为启用
+        baseMapper.update(null, updateWrapper);
+        // 为了防止在短链接被删除至回收站的时候，有人访问该短链接，导致 Redis 缓存了空值以避免缓存穿透，这里需要把空值的缓存删除
+        stringRedisTemplate.delete(String.format(GOTO_IS_NULL_SHORT_LINK_KEY, requestParam.getFullShortUrl()));
+        // 从理论上说，从回收站恢复的短链接不会有很多人访问，因此可以考虑不用预热。如果有人访问了，有ShortLinkServiceImpl#restoreLongLink重建缓存解决。
     }
 }
