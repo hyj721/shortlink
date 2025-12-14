@@ -1,16 +1,16 @@
 package com.uestc.shortlink.project.controller;
 
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.uestc.shortlink.project.common.convention.result.Result;
 import com.uestc.shortlink.project.common.convention.result.Results;
 import com.uestc.shortlink.project.dto.req.RecycleBinSaveReqDTO;
+import com.uestc.shortlink.project.dto.req.ShortLinkPageReqDTO;
+import com.uestc.shortlink.project.dto.resp.ShortLinkPageRespDTO;
 import com.uestc.shortlink.project.service.RecycleBinService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/short-link/v1/recycle-bin")
@@ -25,6 +25,12 @@ public class RecycleBinController {
     public Result<Void> saveRecycleBin(@RequestBody RecycleBinSaveReqDTO requestParam) {
         recycleBinService.saveRecycleBin(requestParam);
         return Results.success();
+    }
+
+    @Operation(summary = "分页查询回收站短链接")
+    @GetMapping("/page")
+    public Result<IPage<ShortLinkPageRespDTO>> pageShortLink(ShortLinkPageReqDTO requestParam) {
+        return Results.success(recycleBinService.pageShortLink(requestParam));
     }
 
 }
