@@ -59,6 +59,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
 
     @Override
     public ShortLinkCreateRespDTO createShortLink(ShortLinkCreateReqDTO requestParam) {
+        // 1.加盐哈希算法生成短链接
         String suffix = generateSuffix(requestParam);
         String fullShortUrl = requestParam.getDomain() + "/" + suffix;
         ShortLinkDO shortLinkDO = ShortLinkDO.builder()
@@ -78,6 +79,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                 .fullShortUrl(fullShortUrl)
                 .gid(requestParam.getGid())
                 .build();
+        // 2. 插入 t_link, t_link_goto
         try {
             baseMapper.insert(shortLinkDO);
             shortLinkGotoMapper.insert(shortLinkGotoDO);
@@ -85,6 +87,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
             log.warn("短链接{}重复入库", fullShortUrl);
             throw new ServiceException(String.format("短链接：%s 生成重复", fullShortUrl));
         }
+        // 3. 加入布隆过滤器，并根据过期时间预热缓存
         shortUrlCreateBloomFilter.add(fullShortUrl);
         // 缓存预热：创建短链接时直接写入 Redis
         stringRedisTemplate.opsForValue().set(
@@ -184,7 +187,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
         String serverName = request.getServerName();
         String fullShortUrl = serverName + "/" + shortUri;
         String originalUrl = stringRedisTemplate.opsForValue().get(String.format(GOTO_SHORT_SHORT_LINK_KEY, fullShortUrl));
-        // 如果原始链接不为空，则直接返回；否则查询数据库
+        // 根据短链接获取原始链接，若原始链接不为空，则直接返回；否则查询数据库
         if (StringUtils.hasText(originalUrl)) {
             response.sendRedirect(originalUrl);
             return;
@@ -242,6 +245,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                 response.sendRedirect("/page/notfound");
                 return;
             }
+            // 计算剩余有效期，回写缓存，跳转
             stringRedisTemplate.opsForValue().set(
                     String.format(GOTO_SHORT_SHORT_LINK_KEY, fullShortUrl),
                     shortLinkDO.getOriginUrl(),
