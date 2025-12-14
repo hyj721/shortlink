@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/short-link/v1/recycle-bin")
+@RequestMapping("/api/short-link/admin/v1/recycle-bin")
 @RequiredArgsConstructor
 @Tag(name = "回收站管理接口")
 public class RecycleBinController {
