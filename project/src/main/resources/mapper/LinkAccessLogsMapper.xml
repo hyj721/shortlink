@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.uestc.shortlink.project.dao.mapper.LinkAccessLogsMapper">
+
+    <!-- 查询高频访问 IP Top 5 -->
+    <select id="listTopIpByShortLink" resultType="HashMap">
+        SELECT ip, COUNT(*) AS cnt
+        FROM t_link_access_logs
+        WHERE gid = #{param.gid}
+          AND full_short_url = #{param.fullShortUrl}
+          AND create_time BETWEEN #{param.startDate} AND #{param.endDate}
+          AND del_flag = 0
+        GROUP BY ip
+        ORDER BY cnt DESC
+        LIMIT 5
+    </select>
+
+    <!-- 查询新老访客人数 -->
+    <select id="findUvTypeCntByShortLink" resultType="HashMap">
+        SELECT
+            SUM(old_user) AS oldUserCnt,
+            SUM(new_user) AS newUserCnt
+        FROM (
+            SELECT
+                CASE WHEN COUNT(DISTINCT DATE(create_time)) > 1 THEN 1 ELSE 0 END AS old_user,
+                CASE WHEN COUNT(DISTINCT DATE(create_time)) = 1
+                     AND MAX(create_time) >= #{param.startDate}
+                     AND MAX(create_time) &lt;= #{param.endDate} THEN 1 ELSE 0 END AS new_user
+            FROM t_link_access_logs
+            WHERE full_short_url = #{param.fullShortUrl}
+              AND gid = #{param.gid}
+              AND del_flag = 0
+            GROUP BY user
+        ) AS user_counts
+    </select>
+
+</mapper>
