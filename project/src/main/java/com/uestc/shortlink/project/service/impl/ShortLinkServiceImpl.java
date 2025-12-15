@@ -13,10 +13,12 @@ import com.uestc.shortlink.project.common.convention.exception.ClientException;
 import com.uestc.shortlink.project.common.convention.exception.ServiceException;
 import com.uestc.shortlink.project.dao.entity.LinkAccessStatsDO;
 import com.uestc.shortlink.project.dao.entity.LinkLocaleStatsDO;
+import com.uestc.shortlink.project.dao.entity.LinkOsStatsDO;
 import com.uestc.shortlink.project.dao.entity.ShortLinkDO;
 import com.uestc.shortlink.project.dao.entity.ShortLinkGotoDO;
 import com.uestc.shortlink.project.dao.mapper.LinkAccessStatsMapper;
 import com.uestc.shortlink.project.dao.mapper.LinkLocaleStatsMapper;
+import com.uestc.shortlink.project.dao.mapper.LinkOsStatsMapper;
 import com.uestc.shortlink.project.dao.mapper.ShortLinkGotoMapper;
 import com.uestc.shortlink.project.dao.mapper.ShortLinkMapper;
 import com.uestc.shortlink.project.dto.req.ShortLinkCreateReqDTO;
@@ -68,6 +70,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
     private final RedissonClient redissonClient;
     private final LinkAccessStatsMapper linkAccessStatsMapper;
     private final LinkLocaleStatsMapper linkLocaleStatsMapper;
+    private final LinkOsStatsMapper linkOsStatsMapper;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Value("${short-link.stats.locale.amap-key}")
@@ -295,6 +298,8 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
             int uip = statsUip(fullShortUrl, clientIp);
             // 统计Locale
             statsLocale(fullShortUrl, gid, clientIp);
+            // 统计 OS
+            statsOs(fullShortUrl, gid, request);
             // 获取当前时间信息
             LocalDateTime now = LocalDateTime.now();
             LinkAccessStatsDO linkAccessStatsDO = LinkAccessStatsDO.builder()
@@ -428,6 +433,21 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
         } catch (Exception e) {
             log.error("解析高德地图API响应异常", e);
         }
+    }
+
+    /**
+     * 统计操作系统访问量
+     */
+    private void statsOs(String fullShortUrl, String gid, HttpServletRequest request) {
+        String os = LinkUtil.getOs(request);
+        LinkOsStatsDO linkOsStatsDO = LinkOsStatsDO.builder()
+                .fullShortUrl(fullShortUrl)
+                .gid(gid)
+                .date(new Date())
+                .cnt(1)
+                .os(os)
+                .build();
+        linkOsStatsMapper.shortLinkOsStats(linkOsStatsDO);
     }
 
 

@@ -79,5 +79,68 @@ public class LinkUtil {
     private static boolean isValidIp(String ip) {
         return ip != null && !ip.isEmpty() && !"unknown".equalsIgnoreCase(ip);
     }
+
+    /**
+     * 从 User-Agent 解析操作系统类型
+     *
+     * @param request HttpServletRequest
+     * @return 操作系统类型（Windows、Mac OS、Linux、Android、iOS、Unknown）
+     */
+
+    public static String getOs(HttpServletRequest request) {
+        String userAgent = request.getHeader("User-Agent");
+
+        // 1. 判空
+        if (userAgent == null || userAgent.length() == 0) {
+            return "Unknown";
+        }
+
+        // 2. 转小写，一劳永逸解决大小写问题
+        String ua = userAgent.toLowerCase();
+
+        // ---------------------------------------------------
+        // 第一梯队：移动端 (必须先判断，防止被桌面端关键字误伤)
+        // ---------------------------------------------------
+
+        // 鸿蒙 (放在 Android 前面，因为鸿蒙 UA 通常也包含 Android)
+        if (ua.contains("harmonyos")) {
+            return "HarmonyOS";
+        }
+
+        // Android
+        if (ua.contains("android")) {
+            return "Android";
+        }
+
+        // iOS (包括 iPhone, iPad, iPod)
+        // 注意：iPadOS 13+ 默认开启“桌面网站”，UA 会变成 Macintosh。
+        // 如果必须区分桌面版 iPad，需要前端配合检测触控点，后端纯 UA 无法 100% 区分。
+        if (ua.contains("iphone") || ua.contains("ipad") || ua.contains("ipod") || ua.contains("ios")) {
+            return "iOS";
+        }
+
+        // ---------------------------------------------------
+        // 第二梯队：桌面端
+        // ---------------------------------------------------
+
+        // Windows
+        if (ua.contains("windows")) {
+            return "Windows";
+        }
+
+        // Mac OS
+        // 此时已经排除了 iPhone/iPad，这里剩下的包含 mac 的基本上就是电脑了
+        if (ua.contains("mac os") || ua.contains("macintosh") || ua.contains("os x")) {
+            return "Mac OS";
+        }
+
+        // Linux
+        // 此时已经排除了 Android，剩下的通常是服务器或 Linux 桌面
+        if (ua.contains("linux")) {
+            return "Linux";
+        }
+
+        return "Unknown";
+    }
 }
 
