@@ -245,4 +245,49 @@ public class LinkUtil {
         // ---------------------------------------------------
         return "PC";
     }
+
+    /**
+     * 获取网络类型
+     * <p>
+     * 优先从前端传入的 X-Network-Type header 获取精确网络类型，
+     * 若无则根据 User-Agent 做粗略判断（移动设备返回 Mobile，其他返回 WiFi）。
+     * <p>
+     * 前端可通过 navigator.connection.effectiveType 获取精确类型（4g/3g/wifi 等），
+     * 然后在请求 header 中设置: X-Network-Type: 4g
+     *
+     * @param request HttpServletRequest
+     * @return 网络类型
+     */
+    public static String getNetwork(HttpServletRequest request) {
+        // 1. 优先从 header 获取前端传入的精确网络类型
+        String networkType = request.getHeader("X-Network-Type");
+        if (networkType != null && !networkType.isEmpty()) {
+            return networkType;
+        }
+
+        // 2. 兜底策略：根据 User-Agent 粗略判断
+        String userAgent = request.getHeader("User-Agent");
+
+        if (userAgent == null || userAgent.isEmpty()) {
+            return "Unknown";
+        }
+
+        String ua = userAgent.toLowerCase();
+
+        // 移动设备默认使用移动网络
+        if (ua.contains("mobile")
+                || ua.contains("iphone")
+                || ua.contains("ipod")
+                || ua.contains("android")
+                || ua.contains("phone")
+                || ua.contains("wap")
+                || ua.contains("blackberry")
+                || ua.contains("windows phone")) {
+            return "Mobile";
+        }
+
+        // PC 和 Tablet 默认使用 WiFi
+        return "WiFi";
+    }
 }
+
