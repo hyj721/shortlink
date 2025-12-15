@@ -17,22 +17,40 @@
     </select>
 
     <!-- 查询新老访客人数 -->
+    <!-- 新访客：首次访问在查询范围内；老访客：首次访问在查询范围之前 -->
     <select id="findUvTypeCntByShortLink" resultType="HashMap">
         SELECT
-            SUM(old_user) AS oldUserCnt,
-            SUM(new_user) AS newUserCnt
+            COUNT(CASE WHEN DATE(first_visit) &lt; #{param.startDate} THEN 1 END) AS oldUserCnt,
+            COUNT(CASE WHEN DATE(first_visit) &gt;= #{param.startDate} THEN 1 END) AS newUserCnt
         FROM (
-            SELECT
-                CASE WHEN COUNT(DISTINCT DATE(create_time)) > 1 THEN 1 ELSE 0 END AS old_user,
-                CASE WHEN COUNT(DISTINCT DATE(create_time)) = 1
-                     AND MAX(create_time) >= #{param.startDate}
-                     AND MAX(create_time) &lt;= #{param.endDate} THEN 1 ELSE 0 END AS new_user
+            SELECT user, MIN(create_time) AS first_visit
             FROM t_link_access_logs
-            WHERE full_short_url = #{param.fullShortUrl}
-              AND gid = #{param.gid}
+            WHERE gid = #{param.gid}
+              AND full_short_url = #{param.fullShortUrl}
               AND del_flag = 0
             GROUP BY user
-        ) AS user_counts
+            HAVING SUM(DATE(create_time) BETWEEN #{param.startDate} AND #{param.endDate}) &gt; 0
+        ) t
+    </select>
+
+    <!-- 批量查询用户的访客类型 -->
+    <!-- 新访客：首次访问 >= startDate；老访客：首次访问 < startDate -->
+    <select id="selectUvTypeByUsers" resultType="HashMap">
+        SELECT
+            user,
+            CASE
+                WHEN DATE(MIN(create_time)) &lt; #{startDate} THEN 'old'
+                ELSE 'new'
+            END AS uvType
+        FROM t_link_access_logs
+        WHERE gid = #{gid}
+          AND full_short_url = #{fullShortUrl}
+          AND del_flag = 0
+          AND user IN
+          <foreach collection="userList" item="user" open="(" separator="," close=")">
+              #{user}
+          </foreach>
+        GROUP BY user
     </select>
 
 </mapper>

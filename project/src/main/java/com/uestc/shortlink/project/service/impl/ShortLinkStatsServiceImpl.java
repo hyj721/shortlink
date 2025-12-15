@@ -2,8 +2,13 @@ package com.uestc.shortlink.project.service.impl;
 
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.date.DateUtil;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.uestc.shortlink.project.dao.entity.LinkAccessLogsDO;
 import com.uestc.shortlink.project.dao.entity.LinkAccessStatsDO;
 import com.uestc.shortlink.project.dao.mapper.*;
+import com.uestc.shortlink.project.dto.req.ShortLinkStatsAccessRecordReqDTO;
 import com.uestc.shortlink.project.dto.req.ShortLinkStatsReqDTO;
 import com.uestc.shortlink.project.dto.resp.*;
 import com.uestc.shortlink.project.service.ShortLinkStatsService;
@@ -221,5 +226,65 @@ public class ShortLinkStatsServiceImpl implements ShortLinkStatsService {
                 .topIpStats(topIpStats)
                 .uvTypeStats(uvTypeStats)
                 .build();
+    }
+
+    @Override
+    public IPage<ShortLinkStatsAccessRecordRespDTO> shortLinkStatsAccessRecord(ShortLinkStatsAccessRecordReqDTO requestParam) {
+        // 1. 分页查询访问日志基本数据
+        LambdaQueryWrapper<LinkAccessLogsDO> queryWrapper = Wrappers.lambdaQuery(LinkAccessLogsDO.class)
+                .eq(LinkAccessLogsDO::getFullShortUrl, requestParam.getFullShortUrl())
+                .eq(LinkAccessLogsDO::getGid, requestParam.getGid())
+                .apply("DATE(create_time) BETWEEN {0} AND {1}", requestParam.getStartDate(), requestParam.getEndDate())
+                .eq(LinkAccessLogsDO::getDelFlag, 0)
+                .orderByDesc(LinkAccessLogsDO::getCreateTime);
+        IPage<LinkAccessLogsDO> linkAccessLogsDOIPage = linkAccessLogsMapper.selectPage(requestParam, queryWrapper);
+        
+        // 2. 转换为响应 DTO
+        IPage<ShortLinkStatsAccessRecordRespDTO> result = linkAccessLogsDOIPage.convert(each -> ShortLinkStatsAccessRecordRespDTO.builder()
+                .user(each.getUser())
+                .ip(each.getIp())
+                .browser(each.getBrowser())
+                .os(each.getOs())
+                .network(each.getNetwork())
+                .device(each.getDevice())
+                .locale(each.getLocale())
+                .createTime(each.getCreateTime())
+                .build()
+        );
+        
+        // 3. 快速失败：如果没有数据，直接返回
+        if (CollUtil.isEmpty(result.getRecords())) {
+            return result;
+        }
+        
+        // 4. 提取去重后的用户列表
+        List<String> userList = result.getRecords().stream()
+                .map(ShortLinkStatsAccessRecordRespDTO::getUser)
+                .distinct()
+                .toList();
+        
+        // 5. 批量查询用户访客类型
+        List<HashMap<String, Object>> uvTypeList = linkAccessLogsMapper.selectUvTypeByUsers(
+                requestParam.getGid(),
+                requestParam.getFullShortUrl(),
+                requestParam.getStartDate(),
+                requestParam.getEndDate(),
+                userList
+        );
+        
+        // 6. 构建 user -> uvType 映射
+        Map<String, String> userUvTypeMap = new HashMap<>();
+        for (HashMap<String, Object> item : uvTypeList) {
+            String user = (String) item.get("user");
+            String uvType = (String) item.get("uvType");
+            userUvTypeMap.put(user, uvType);
+        }
+        
+        // 7. 填充 uvType 到结果集
+        result.getRecords().forEach(record -> 
+                record.setUvType(userUvTypeMap.getOrDefault(record.getUser(), "old"))
+        );
+        
+        return result;
     }
 }
