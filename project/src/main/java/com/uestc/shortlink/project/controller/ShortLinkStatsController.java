@@ -30,7 +30,7 @@ public class ShortLinkStatsController {
     }
 
     @Operation(summary = "访问单个短链接指定时间段内访问记录")
-    @GetMapping("/api/short-link/v1/stats/access-record")
+    @GetMapping("/stats/access-record")
     public Result<IPage<ShortLinkStatsAccessRecordRespDTO>> shortLinkStatsAccessRecord(ShortLinkStatsAccessRecordReqDTO requestParam) {
         return Results.success(shortLinkStatsService.shortLinkStatsAccessRecord(requestParam));
     }
