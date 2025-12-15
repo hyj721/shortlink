@@ -1,6 +1,9 @@
 package com.uestc.shortlink.project.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.http.HttpUtil;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -9,9 +12,11 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.uestc.shortlink.project.common.convention.exception.ClientException;
 import com.uestc.shortlink.project.common.convention.exception.ServiceException;
 import com.uestc.shortlink.project.dao.entity.LinkAccessStatsDO;
+import com.uestc.shortlink.project.dao.entity.LinkLocaleStatsDO;
 import com.uestc.shortlink.project.dao.entity.ShortLinkDO;
 import com.uestc.shortlink.project.dao.entity.ShortLinkGotoDO;
 import com.uestc.shortlink.project.dao.mapper.LinkAccessStatsMapper;
+import com.uestc.shortlink.project.dao.mapper.LinkLocaleStatsMapper;
 import com.uestc.shortlink.project.dao.mapper.ShortLinkGotoMapper;
 import com.uestc.shortlink.project.dao.mapper.ShortLinkMapper;
 import com.uestc.shortlink.project.dto.req.ShortLinkCreateReqDTO;
@@ -35,6 +40,7 @@ import org.jsoup.nodes.Element;
 import org.redisson.api.RBloomFilter;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
@@ -44,13 +50,11 @@ import org.springframework.util.StringUtils;
 import java.net.URL;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.util.Date;
-import java.util.List;
-import java.util.Objects;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 import static com.uestc.shortlink.project.common.constant.RedisKeyConstant.*;
+import static com.uestc.shortlink.project.common.constant.ShortLinkConstant.AMAP_REMOTE_URL;
 
 
 @Service
@@ -63,6 +67,11 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
     private final StringRedisTemplate stringRedisTemplate;
     private final RedissonClient redissonClient;
     private final LinkAccessStatsMapper linkAccessStatsMapper;
+    private final LinkLocaleStatsMapper linkLocaleStatsMapper;
+    private final ObjectMapper objectMapper = new ObjectMapper();
+
+    @Value("${short-link.stats.locale.amap-key}")
+    private String amapKey;
 
     @Override
     public ShortLinkCreateRespDTO createShortLink(ShortLinkCreateReqDTO requestParam) {
@@ -282,7 +291,10 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
             // 统计 UV
             int uv = statsUv(fullShortUrl, request, response);
             // 统计 UIP
-            int uip = statsUip(fullShortUrl, request);
+            String clientIp = LinkUtil.getClientIp(request);
+            int uip = statsUip(fullShortUrl, clientIp);
+            // 统计Locale
+            statsLocale(fullShortUrl, gid, clientIp);
             // 获取当前时间信息
             LocalDateTime now = LocalDateTime.now();
             LinkAccessStatsDO linkAccessStatsDO = LinkAccessStatsDO.builder()
@@ -377,13 +389,47 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
      *
      * @return 1 表示新 IP，0 表示已访问过的 IP
      */
-    private int statsUip(String fullShortUrl, HttpServletRequest request) {
+    private int statsUip(String fullShortUrl, String clientIp) {
         String uipKey = String.format(SHORT_LINK_STATS_UIP_KEY, fullShortUrl);
-        String clientIp = LinkUtil.getClientIp(request);
-
         Long added = stringRedisTemplate.opsForSet().add(uipKey, clientIp);
         return (added != null && added > 0) ? 1 : 0;
     }
+
+    private void statsLocale(String fullShortUrl, String gid, String clientIp) {
+        Map<String, Object> requestParam = new HashMap<>();
+        requestParam.put("key", amapKey);
+        requestParam.put("ip", clientIp);
+        String jsonLocaleResult = HttpUtil.get(AMAP_REMOTE_URL, requestParam);
+        try {
+            JsonNode rootNode = objectMapper.readTree(jsonLocaleResult);
+            String infoCode = rootNode.path("infocode").asText();
+            if (!"10000".equals(infoCode)) {
+                log.warn("高德地图API调用失败: {}", jsonLocaleResult);
+                return;
+            }
+            String province = rootNode.path("province").asText();
+            // 判断省份是否为空，空值统一设置为 "unknown"
+            boolean isLocaleInfoEmpty = !StringUtils.hasText(province);
+            String actualProvince = isLocaleInfoEmpty ? "unknown" : province;
+            String actualCity = isLocaleInfoEmpty ? "unknown" : rootNode.path("city").asText();
+            String actualAdcode = isLocaleInfoEmpty ? "unknown" : rootNode.path("adcode").asText();
+            // 国内地址，country 默认为 "中国"
+            LinkLocaleStatsDO linkLocaleStatsDO = LinkLocaleStatsDO.builder()
+                    .fullShortUrl(fullShortUrl)
+                    .gid(gid)
+                    .date(new Date())
+                    .cnt(1)
+                    .province(actualProvince)
+                    .city(actualCity)
+                    .adcode(actualAdcode)
+                    .country("中国")
+                    .build();
+            linkLocaleStatsMapper.shortLinkLocaleStats(linkLocaleStatsDO);
+        } catch (Exception e) {
+            log.error("解析高德地图API响应异常", e);
+        }
+    }
+
 
     private String generateSuffix(ShortLinkCreateReqDTO requestParam) {
         int retryCount = 0;

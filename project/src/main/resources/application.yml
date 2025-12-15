@@ -41,3 +41,8 @@ mybatis-plus:
       logic-delete-field: delFlag
       logic-delete-value: 1
       logic-not-delete-value: 0
+
+short-link:
+  stats:
+    locale:
+      amap-key: ${AMAP_KEY:}
