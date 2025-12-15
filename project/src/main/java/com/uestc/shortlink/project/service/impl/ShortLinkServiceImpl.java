@@ -14,12 +14,14 @@ import com.uestc.shortlink.project.common.convention.exception.ServiceException;
 import com.uestc.shortlink.project.dao.entity.LinkAccessStatsDO;
 import com.uestc.shortlink.project.dao.entity.LinkLocaleStatsDO;
 import com.uestc.shortlink.project.dao.entity.LinkBrowserStatsDO;
+import com.uestc.shortlink.project.dao.entity.LinkAccessLogsDO;
 import com.uestc.shortlink.project.dao.entity.LinkOsStatsDO;
 import com.uestc.shortlink.project.dao.entity.ShortLinkDO;
 import com.uestc.shortlink.project.dao.entity.ShortLinkGotoDO;
 import com.uestc.shortlink.project.dao.mapper.LinkAccessStatsMapper;
 import com.uestc.shortlink.project.dao.mapper.LinkLocaleStatsMapper;
 import com.uestc.shortlink.project.dao.mapper.LinkBrowserStatsMapper;
+import com.uestc.shortlink.project.dao.mapper.LinkAccessLogsMapper;
 import com.uestc.shortlink.project.dao.mapper.LinkOsStatsMapper;
 import com.uestc.shortlink.project.dao.mapper.ShortLinkGotoMapper;
 import com.uestc.shortlink.project.dao.mapper.ShortLinkMapper;
@@ -74,6 +76,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
     private final LinkLocaleStatsMapper linkLocaleStatsMapper;
     private final LinkOsStatsMapper linkOsStatsMapper;
     private final LinkBrowserStatsMapper linkBrowserStatsMapper;
+    private final LinkAccessLogsMapper linkAccessLogsMapper;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Value("${short-link.stats.locale.amap-key}")
@@ -288,25 +291,26 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
     private void shortLinkStats(String fullShortUrl, String gid,
                                 HttpServletRequest request, HttpServletResponse response) {
         try {
+            // ==================== 数据准备 ====================
             if (!StringUtils.hasText(gid)) {
                 LambdaQueryWrapper<ShortLinkGotoDO> queryWrapper = Wrappers.lambdaQuery(ShortLinkGotoDO.class)
                         .eq(ShortLinkGotoDO::getFullShortUrl, fullShortUrl);
                 ShortLinkGotoDO shortLinkGotoDO = shortLinkGotoMapper.selectOne(queryWrapper);
                 gid = shortLinkGotoDO.getGid();
             }
-            // 统计 UV
-            int uv = statsUv(fullShortUrl, request, response);
-            // 统计 UIP
             String clientIp = LinkUtil.getClientIp(request);
-            int uip = statsUip(fullShortUrl, clientIp);
-            // 统计Locale
-            statsLocale(fullShortUrl, gid, clientIp);
-            // 统计 OS
-            statsOs(fullShortUrl, gid, request);
-            // 统计 Browser
-            statsBrowser(fullShortUrl, gid, request);
-            // 获取当前时间信息
+            String browser = LinkUtil.getBrowser(request);
+            String os = LinkUtil.getOs(request);
+            String uvValue = getOrCreateUvValue(request, response);
             LocalDateTime now = LocalDateTime.now();
+
+            // ==================== 统计入库 ====================
+            int uv = statsUv(fullShortUrl, uvValue);
+            int uip = statsUip(fullShortUrl, clientIp);
+            statsLocale(fullShortUrl, gid, clientIp);
+            statsBrowser(fullShortUrl, gid, browser);
+            statsOs(fullShortUrl, gid, os);
+            statsAccessLogs(fullShortUrl, gid, uvValue, browser, os, clientIp);
             LinkAccessStatsDO linkAccessStatsDO = LinkAccessStatsDO.builder()
                     .gid(gid)
                     .fullShortUrl(fullShortUrl)
@@ -363,31 +367,8 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
      * </pre>
      * @return 1 表示新访客，0 表示老访客
      */
-    private int statsUv(String fullShortUrl, HttpServletRequest request, HttpServletResponse response) {
+    private int statsUv(String fullShortUrl, String uvValue) {
         String uvKey = String.format(SHORT_LINK_STATS_UV_KEY, fullShortUrl);
-        String uvValue = null;
-
-        // 1. 尝试从 Cookie 中获取 uv 值
-        Cookie[] cookies = request.getCookies();
-        if (cookies != null) {
-            for (Cookie cookie : cookies) {
-                if ("uv".equals(cookie.getName())) {
-                    uvValue = cookie.getValue();
-                    break;
-                }
-            }
-        }
-
-        // 2. 没有 uv Cookie 则创建新的
-        if (uvValue == null) {
-            uvValue = UUID.randomUUID().toString();
-            Cookie uvCookie = new Cookie("uv", uvValue);
-            uvCookie.setMaxAge(60 * 60 * 24 * 30);  // 30 天有效期
-            uvCookie.setPath(request.getRequestURI());
-            response.addCookie(uvCookie);
-        }
-
-        // 3. SADD 返回 > 0 表示新访客
         Long added = stringRedisTemplate.opsForSet().add(uvKey, uvValue);
         return (added != null && added > 0) ? 1 : 0;
     }
@@ -443,8 +424,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
     /**
      * 统计操作系统访问量
      */
-    private void statsOs(String fullShortUrl, String gid, HttpServletRequest request) {
-        String os = LinkUtil.getOs(request);
+    private void statsOs(String fullShortUrl, String gid, String os) {
         LinkOsStatsDO linkOsStatsDO = LinkOsStatsDO.builder()
                 .fullShortUrl(fullShortUrl)
                 .gid(gid)
@@ -458,8 +438,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
     /**
      * 统计浏览器访问量
      */
-    private void statsBrowser(String fullShortUrl, String gid, HttpServletRequest request) {
-        String browser = LinkUtil.getBrowser(request);
+    private void statsBrowser(String fullShortUrl, String gid, String browser) {
         LinkBrowserStatsDO linkBrowserStatsDO = LinkBrowserStatsDO.builder()
                 .fullShortUrl(fullShortUrl)
                 .gid(gid)
@@ -468,6 +447,46 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                 .browser(browser)
                 .build();
         linkBrowserStatsMapper.shortLinkBrowserStats(linkBrowserStatsDO);
+    }
+
+    /**
+     * 记录访问日志
+     */
+    private void statsAccessLogs(String fullShortUrl, String gid, String user, String browser, String os, String ip) {
+        LinkAccessLogsDO linkAccessLogsDO = LinkAccessLogsDO.builder()
+                .fullShortUrl(fullShortUrl)
+                .gid(gid)
+                .user(user)
+                .browser(browser)
+                .os(os)
+                .ip(ip)
+                .build();
+        linkAccessLogsMapper.insert(linkAccessLogsDO);
+    }
+
+    /**
+     * 获取或创建 UV Cookie 值
+     * <p>
+     * 如果 Cookie 中已有 uv 值则直接返回，否则生成新的 UUID 并设置 Cookie
+     *
+     * @return uvValue
+     */
+    private String getOrCreateUvValue(HttpServletRequest request, HttpServletResponse response) {
+        Cookie[] cookies = request.getCookies();
+        if (cookies != null) {
+            for (Cookie cookie : cookies) {
+                if ("uv".equals(cookie.getName())) {
+                    return cookie.getValue();
+                }
+            }
+        }
+        // 没有 uv Cookie 则创建新的
+        String uvValue = UUID.randomUUID().toString();
+        Cookie uvCookie = new Cookie("uv", uvValue);
+        uvCookie.setMaxAge(60 * 60 * 24 * 30);  // 30 天有效期
+        uvCookie.setPath(request.getRequestURI());
+        response.addCookie(uvCookie);
+        return uvValue;
     }
 
 
