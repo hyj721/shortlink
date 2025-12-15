@@ -13,11 +13,13 @@ import com.uestc.shortlink.project.common.convention.exception.ClientException;
 import com.uestc.shortlink.project.common.convention.exception.ServiceException;
 import com.uestc.shortlink.project.dao.entity.LinkAccessStatsDO;
 import com.uestc.shortlink.project.dao.entity.LinkLocaleStatsDO;
+import com.uestc.shortlink.project.dao.entity.LinkBrowserStatsDO;
 import com.uestc.shortlink.project.dao.entity.LinkOsStatsDO;
 import com.uestc.shortlink.project.dao.entity.ShortLinkDO;
 import com.uestc.shortlink.project.dao.entity.ShortLinkGotoDO;
 import com.uestc.shortlink.project.dao.mapper.LinkAccessStatsMapper;
 import com.uestc.shortlink.project.dao.mapper.LinkLocaleStatsMapper;
+import com.uestc.shortlink.project.dao.mapper.LinkBrowserStatsMapper;
 import com.uestc.shortlink.project.dao.mapper.LinkOsStatsMapper;
 import com.uestc.shortlink.project.dao.mapper.ShortLinkGotoMapper;
 import com.uestc.shortlink.project.dao.mapper.ShortLinkMapper;
@@ -71,6 +73,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
     private final LinkAccessStatsMapper linkAccessStatsMapper;
     private final LinkLocaleStatsMapper linkLocaleStatsMapper;
     private final LinkOsStatsMapper linkOsStatsMapper;
+    private final LinkBrowserStatsMapper linkBrowserStatsMapper;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Value("${short-link.stats.locale.amap-key}")
@@ -300,6 +303,8 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
             statsLocale(fullShortUrl, gid, clientIp);
             // 统计 OS
             statsOs(fullShortUrl, gid, request);
+            // 统计 Browser
+            statsBrowser(fullShortUrl, gid, request);
             // 获取当前时间信息
             LocalDateTime now = LocalDateTime.now();
             LinkAccessStatsDO linkAccessStatsDO = LinkAccessStatsDO.builder()
@@ -448,6 +453,21 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                 .os(os)
                 .build();
         linkOsStatsMapper.shortLinkOsStats(linkOsStatsDO);
+    }
+
+    /**
+     * 统计浏览器访问量
+     */
+    private void statsBrowser(String fullShortUrl, String gid, HttpServletRequest request) {
+        String browser = LinkUtil.getBrowser(request);
+        LinkBrowserStatsDO linkBrowserStatsDO = LinkBrowserStatsDO.builder()
+                .fullShortUrl(fullShortUrl)
+                .gid(gid)
+                .date(new Date())
+                .cnt(1)
+                .browser(browser)
+                .build();
+        linkBrowserStatsMapper.shortLinkBrowserStats(linkBrowserStatsDO);
     }
 
 

@@ -142,5 +142,60 @@ public class LinkUtil {
 
         return "Unknown";
     }
+
+    /**
+     * 从 User-Agent 解析浏览器类型
+     *
+     * @param request HttpServletRequest
+     * @return 浏览器类型（Chrome、Firefox、Safari、Edge、Opera、IE、Unknown）
+     */
+    public static String getBrowser(HttpServletRequest request) {
+        String userAgent = request.getHeader("User-Agent");
+
+        // 1. 判空
+        if (userAgent == null || userAgent.length() == 0) {
+            return "Unknown";
+        }
+
+        // 2. 转小写，一劳永逸解决大小写问题
+        String ua = userAgent.toLowerCase();
+
+        // ---------------------------------------------------
+        // 浏览器检测顺序很重要：需要先检测更具体的浏览器
+        // 因为很多浏览器 UA 中都包含 "chrome" 或 "safari"
+        // ---------------------------------------------------
+
+        // Edge (新版基于 Chromium 的 Edge 包含 "edg"，旧版包含 "edge")
+        if (ua.contains("edg") || ua.contains("edge")) {
+            return "Microsoft Edge";
+        }
+
+        // Opera (Opera 15+ 基于 Chromium，UA 包含 "opr" 或 "opera")
+        if (ua.contains("opr") || ua.contains("opera")) {
+            return "Opera";
+        }
+
+        // Firefox
+        if (ua.contains("firefox")) {
+            return "Mozilla Firefox";
+        }
+
+        // Chrome (注意：需要在 Edge/Opera 之后检测，因为它们的 UA 也包含 "chrome")
+        if (ua.contains("chrome") || ua.contains("chromium")) {
+            return "Google Chrome";
+        }
+
+        // Safari (需要在 Chrome 之后检测，因为 Chrome 的 UA 也包含 "safari")
+        if (ua.contains("safari")) {
+            return "Apple Safari";
+        }
+
+        // IE (Internet Explorer)
+        if (ua.contains("msie") || ua.contains("trident")) {
+            return "Internet Explorer";
+        }
+
+        return "Unknown";
+    }
 }
 
