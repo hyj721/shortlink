@@ -310,17 +310,33 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
             String device = LinkUtil.getDevice(request);
             String network = LinkUtil.getNetwork(request);
             String uvValue = getOrCreateUvValue(request, response);
+            Map<String, String> locale = getLocaleByIp(clientIp);
             LocalDateTime now = LocalDateTime.now();
+            String localeInLog = locale != null && !"unknown".equals(locale.get("province"))
+                    ? String.join("-", locale.get("country"), locale.get("province"), locale.get("city"))
+                    : "unknown";
+            LinkAccessLogsDO linkAccessLogsDO = LinkAccessLogsDO.builder()
+                    .fullShortUrl(fullShortUrl)
+                    .gid(gid)
+                    .user(uvValue)
+                    .browser(browser)
+                    .os(os)
+                    .ip(clientIp)
+                    .device(device)
+                    .network(network)
+                    .locale(localeInLog)
+                    .build();
 
             // ==================== 统计入库 ====================
             int uv = statsUv(fullShortUrl, uvValue);
             int uip = statsUip(fullShortUrl, clientIp);
-            statsLocale(fullShortUrl, gid, clientIp);
+            statsLocale(fullShortUrl, gid, locale);
             statsBrowser(fullShortUrl, gid, browser);
             statsOs(fullShortUrl, gid, os);
             statsDevice(fullShortUrl, gid, device);
             statsNetwork(fullShortUrl, gid, network);
-            statsAccessLogs(fullShortUrl, gid, uvValue, browser, os, clientIp);
+            statsAccessLogs(linkAccessLogsDO);
+
             LinkAccessStatsDO linkAccessStatsDO = LinkAccessStatsDO.builder()
                     .gid(gid)
                     .fullShortUrl(fullShortUrl)
@@ -396,7 +412,32 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
         return (added != null && added > 0) ? 1 : 0;
     }
 
-    private void statsLocale(String fullShortUrl, String gid, String clientIp) {
+    private void statsLocale(String fullShortUrl, String gid, Map<String, String> locale) {
+        if (locale == null) {
+            return;
+        }
+        LinkLocaleStatsDO linkLocaleStatsDO = LinkLocaleStatsDO.builder()
+                .fullShortUrl(fullShortUrl)
+                .gid(gid)
+                .date(new Date())
+                .cnt(1)
+                .province(locale.get("province"))
+                .city(locale.get("city"))
+                .adcode(locale.get("adcode"))
+                .country("中国")
+                .build();
+        linkLocaleStatsMapper.shortLinkLocaleStats(linkLocaleStatsDO);
+    }
+
+    /**
+     * 根据 IP 查询地理位置信息
+     * <p>
+     * 调用高德地图 IP 定位 API，解析返回结果获取省份、城市、行政区划代码。
+     *
+     * @param clientIp 客户端 IP 地址
+     * @return 包含 province/city/adcode 的 Map，失败时返回 null
+     */
+    private Map<String, String> getLocaleByIp(String clientIp) {
         Map<String, Object> requestParam = new HashMap<>();
         requestParam.put("key", amapKey);
         requestParam.put("ip", clientIp);
@@ -406,28 +447,19 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
             String infoCode = rootNode.path("infocode").asText();
             if (!"10000".equals(infoCode)) {
                 log.warn("高德地图API调用失败: {}", jsonLocaleResult);
-                return;
+                return null;
             }
             String province = rootNode.path("province").asText();
-            // 判断省份是否为空，空值统一设置为 "unknown"
             boolean isLocaleInfoEmpty = !StringUtils.hasText(province);
-            String actualProvince = isLocaleInfoEmpty ? "unknown" : province;
-            String actualCity = isLocaleInfoEmpty ? "unknown" : rootNode.path("city").asText();
-            String actualAdcode = isLocaleInfoEmpty ? "unknown" : rootNode.path("adcode").asText();
-            // 国内地址，country 默认为 "中国"
-            LinkLocaleStatsDO linkLocaleStatsDO = LinkLocaleStatsDO.builder()
-                    .fullShortUrl(fullShortUrl)
-                    .gid(gid)
-                    .date(new Date())
-                    .cnt(1)
-                    .province(actualProvince)
-                    .city(actualCity)
-                    .adcode(actualAdcode)
-                    .country("中国")
-                    .build();
-            linkLocaleStatsMapper.shortLinkLocaleStats(linkLocaleStatsDO);
+            Map<String, String> result = new HashMap<>();
+            result.put("province", isLocaleInfoEmpty ? "unknown" : province);
+            result.put("city", isLocaleInfoEmpty ? "unknown" : rootNode.path("city").asText());
+            result.put("adcode", isLocaleInfoEmpty ? "unknown" : rootNode.path("adcode").asText());
+            result.put("country", "中国");
+            return result;
         } catch (Exception e) {
             log.error("解析高德地图API响应异常", e);
+            return null;
         }
     }
 
@@ -490,15 +522,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
     /**
      * 记录访问日志
      */
-    private void statsAccessLogs(String fullShortUrl, String gid, String user, String browser, String os, String ip) {
-        LinkAccessLogsDO linkAccessLogsDO = LinkAccessLogsDO.builder()
-                .fullShortUrl(fullShortUrl)
-                .gid(gid)
-                .user(user)
-                .browser(browser)
-                .os(os)
-                .ip(ip)
-                .build();
+    private void statsAccessLogs(LinkAccessLogsDO linkAccessLogsDO) {
         linkAccessLogsMapper.insert(linkAccessLogsDO);
     }
 
