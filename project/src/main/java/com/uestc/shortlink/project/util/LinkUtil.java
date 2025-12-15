@@ -197,5 +197,52 @@ public class LinkUtil {
 
         return "Unknown";
     }
-}
 
+    /**
+     * 从 User-Agent 解析设备类型
+     *
+     * @param request HttpServletRequest
+     * @return 设备类型（Mobile、Tablet、PC、Unknown）
+     */
+    public static String getDevice(HttpServletRequest request) {
+        String userAgent = request.getHeader("User-Agent");
+
+        if (userAgent == null || userAgent.isEmpty()) {
+            return "Unknown";
+        }
+
+        String ua = userAgent.toLowerCase();
+
+        // ---------------------------------------------------
+        // 1. Tablet 检测 (需要在 Mobile 之前，因为平板也可能包含 mobile 关键字)
+        // ---------------------------------------------------
+        // 包含 kindle, silk (Amazon 设备)
+        if (ua.contains("ipad")
+                || ua.contains("tablet")
+                || ua.contains("kindle")
+                || ua.contains("silk")
+                || (ua.contains("android") && !ua.contains("mobile"))) {
+            return "Tablet";
+        }
+
+        // ---------------------------------------------------
+        // 2. Mobile 检测
+        // ---------------------------------------------------
+        // 包含 blackberry, windows phone 等
+        if (ua.contains("mobile")
+                || ua.contains("iphone")
+                || ua.contains("ipod")
+                || ua.contains("android")
+                || ua.contains("phone")
+                || ua.contains("wap")
+                || ua.contains("blackberry")
+                || ua.contains("windows phone")) {
+            return "Mobile";
+        }
+
+        // ---------------------------------------------------
+        // 3. 默认为 PC
+        // ---------------------------------------------------
+        return "PC";
+    }
+}

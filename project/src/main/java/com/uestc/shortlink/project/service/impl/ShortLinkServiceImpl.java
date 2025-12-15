@@ -15,6 +15,7 @@ import com.uestc.shortlink.project.dao.entity.LinkAccessStatsDO;
 import com.uestc.shortlink.project.dao.entity.LinkLocaleStatsDO;
 import com.uestc.shortlink.project.dao.entity.LinkBrowserStatsDO;
 import com.uestc.shortlink.project.dao.entity.LinkAccessLogsDO;
+import com.uestc.shortlink.project.dao.entity.LinkDeviceStatsDO;
 import com.uestc.shortlink.project.dao.entity.LinkOsStatsDO;
 import com.uestc.shortlink.project.dao.entity.ShortLinkDO;
 import com.uestc.shortlink.project.dao.entity.ShortLinkGotoDO;
@@ -22,6 +23,7 @@ import com.uestc.shortlink.project.dao.mapper.LinkAccessStatsMapper;
 import com.uestc.shortlink.project.dao.mapper.LinkLocaleStatsMapper;
 import com.uestc.shortlink.project.dao.mapper.LinkBrowserStatsMapper;
 import com.uestc.shortlink.project.dao.mapper.LinkAccessLogsMapper;
+import com.uestc.shortlink.project.dao.mapper.LinkDeviceStatsMapper;
 import com.uestc.shortlink.project.dao.mapper.LinkOsStatsMapper;
 import com.uestc.shortlink.project.dao.mapper.ShortLinkGotoMapper;
 import com.uestc.shortlink.project.dao.mapper.ShortLinkMapper;
@@ -76,6 +78,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
     private final LinkLocaleStatsMapper linkLocaleStatsMapper;
     private final LinkOsStatsMapper linkOsStatsMapper;
     private final LinkBrowserStatsMapper linkBrowserStatsMapper;
+    private final LinkDeviceStatsMapper linkDeviceStatsMapper;
     private final LinkAccessLogsMapper linkAccessLogsMapper;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -301,6 +304,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
             String clientIp = LinkUtil.getClientIp(request);
             String browser = LinkUtil.getBrowser(request);
             String os = LinkUtil.getOs(request);
+            String device = LinkUtil.getDevice(request);
             String uvValue = getOrCreateUvValue(request, response);
             LocalDateTime now = LocalDateTime.now();
 
@@ -310,6 +314,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
             statsLocale(fullShortUrl, gid, clientIp);
             statsBrowser(fullShortUrl, gid, browser);
             statsOs(fullShortUrl, gid, os);
+            statsDevice(fullShortUrl, gid, device);
             statsAccessLogs(fullShortUrl, gid, uvValue, browser, os, clientIp);
             LinkAccessStatsDO linkAccessStatsDO = LinkAccessStatsDO.builder()
                     .gid(gid)
@@ -433,6 +438,20 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                 .os(os)
                 .build();
         linkOsStatsMapper.shortLinkOsStats(linkOsStatsDO);
+    }
+
+    /**
+     * 统计访问设备
+     */
+    private void statsDevice(String fullShortUrl, String gid, String device) {
+        LinkDeviceStatsDO linkDeviceStatsDO = LinkDeviceStatsDO.builder()
+                .fullShortUrl(fullShortUrl)
+                .gid(gid)
+                .date(new Date())
+                .cnt(1)
+                .device(device)
+                .build();
+        linkDeviceStatsMapper.shortLinkDeviceStats(linkDeviceStatsDO);
     }
 
     /**
