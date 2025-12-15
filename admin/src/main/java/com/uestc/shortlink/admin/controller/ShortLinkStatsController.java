@@ -1,8 +1,11 @@
 package com.uestc.shortlink.admin.controller;
 
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.uestc.shortlink.admin.common.convention.result.Result;
 import com.uestc.shortlink.admin.remote.dto.ShortLinkRemoteService;
+import com.uestc.shortlink.admin.remote.dto.req.ShortLinkStatsAccessRecordReqDTO;
 import com.uestc.shortlink.admin.remote.dto.req.ShortLinkStatsReqDTO;
+import com.uestc.shortlink.admin.remote.dto.resp.ShortLinkStatsAccessRecordRespDTO;
 import com.uestc.shortlink.admin.remote.dto.resp.ShortLinkStatsRespDTO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -28,4 +31,11 @@ public class ShortLinkStatsController {
     public Result<ShortLinkStatsRespDTO> shortLinkStats(ShortLinkStatsReqDTO requestParam) {
         return shortLinkRemoteService.oneShortLinkStats(requestParam);
     }
+
+    @Operation(summary = "访问单个短链接指定时间段内访问记录")
+    @GetMapping("/stats/access-record")
+    public Result<IPage<ShortLinkStatsAccessRecordRespDTO>> shortLinkStatsAccessRecord(ShortLinkStatsAccessRecordReqDTO requestParam) {
+        return shortLinkRemoteService.shortLinkStatsAccessRecord(requestParam);
+    }
 }
+

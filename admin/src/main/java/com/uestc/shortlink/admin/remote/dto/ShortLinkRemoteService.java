@@ -11,6 +11,7 @@ import com.uestc.shortlink.admin.remote.dto.req.*;
 import com.uestc.shortlink.admin.remote.dto.resp.ShortLinkCreateRespDTO;
 import com.uestc.shortlink.admin.remote.dto.resp.ShortLinkGroupCountResp;
 import com.uestc.shortlink.admin.remote.dto.resp.ShortLinkPageRespDTO;
+import com.uestc.shortlink.admin.remote.dto.resp.ShortLinkStatsAccessRecordRespDTO;
 import com.uestc.shortlink.admin.remote.dto.resp.ShortLinkStatsRespDTO;
 import org.springframework.web.bind.annotation.RequestParam;
 
@@ -137,6 +138,25 @@ public interface ShortLinkRemoteService {
      */
     default Result<ShortLinkStatsRespDTO> oneShortLinkStats(ShortLinkStatsReqDTO requestParam) {
         String resultBodyStr = HttpUtil.get("http://127.0.0.1:8001/api/short-link/v1/stats", BeanUtil.beanToMap(requestParam));
+        return JSON.parseObject(resultBodyStr, new TypeReference<>() {
+        });
+    }
+
+    /**
+     * 访问单个短链接指定时间段内访问记录
+     *
+     * @param requestParam 访问短链接访问记录请求参数
+     * @return 短链接访问记录
+     */
+    default Result<IPage<ShortLinkStatsAccessRecordRespDTO>> shortLinkStatsAccessRecord(ShortLinkStatsAccessRecordReqDTO requestParam) {
+        Map<String, Object> requestMap = new HashMap<>();
+        requestMap.put("gid", requestParam.getGid());
+        requestMap.put("fullShortUrl", requestParam.getFullShortUrl());
+        requestMap.put("startDate", requestParam.getStartDate());
+        requestMap.put("endDate", requestParam.getEndDate());
+        requestMap.put("current", requestParam.getCurrent());
+        requestMap.put("size", requestParam.getSize());
+        String resultBodyStr = HttpUtil.get("http://127.0.0.1:8001/api/short-link/v1/stats/access-record", requestMap);
         return JSON.parseObject(resultBodyStr, new TypeReference<>() {
         });
     }
