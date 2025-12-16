@@ -52,17 +52,17 @@ public class ShortLinkPageRespDTO {
     private Integer totalPv;
 
     @Schema(description = "今日PV")
-    private Integer toDayPv;
+    private Integer todayPv;
 
     @Schema(description = "历史UV")
     private Integer totalUv;
 
     @Schema(description = "今日UV")
-    private Integer toDayUv;
+    private Integer todayUv;
 
     @Schema(description = "历史UIP")
     private Integer totalUIp;
 
     @Schema(description = "今日UIP")
-    private Integer toDayUIp;
+    private Integer todayUIp;
 }
