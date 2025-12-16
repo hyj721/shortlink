@@ -9,7 +9,7 @@
         FROM t_link_access_logs
         WHERE gid = #{param.gid}
           AND full_short_url = #{param.fullShortUrl}
-          AND create_time BETWEEN #{param.startDate} AND #{param.endDate}
+          AND DATE(create_time) BETWEEN #{param.startDate} AND #{param.endDate}
           AND del_flag = 0
         GROUP BY ip
         ORDER BY cnt DESC
