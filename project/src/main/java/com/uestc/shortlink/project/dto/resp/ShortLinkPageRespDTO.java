@@ -47,4 +47,23 @@ public class ShortLinkPageRespDTO {
 
     @Schema(description = "网站图标")
     private String favicon;
+
+    @Schema(description = "历史PV")
+    private Integer totalPv;
+
+    @Schema(description = "今日PV")
+    private Integer todayPv;
+
+    @Schema(description = "历史UV")
+    private Integer totalUv;
+
+    @Schema(description = "今日UV")
+    private Integer toDayUv;
+
+    @Schema(description = "历史UIP")
+    private Integer totalUIp;
+
+    @Schema(description = "今日UIP")
+    private Integer toDayUIp;
+
 }

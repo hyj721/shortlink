@@ -9,66 +9,60 @@ import java.util.Date;
 @Data
 @Schema(description = "短链分页返回参数")
 public class ShortLinkPageRespDTO {
-    /**
-     * id
-     */
+
+    @Schema(description = "ID")
     private Long id;
 
-    /**
-     * 域名
-     */
+    @Schema(description = "域名")
     private String domain;
 
-    /**
-     * 短链接
-     */
+    @Schema(description = "短链接")
     private String shortUri;
 
-    /**
-     * 完整短链接
-     */
+    @Schema(description = "完整短链接")
     private String fullShortUrl;
 
-    /**
-     * 原始链接
-     */
+    @Schema(description = "原始链接")
     private String originUrl;
 
-    /**
-     * 点击量
-     */
+    @Schema(description = "点击量")
     private Integer clickNum;
 
-    /**
-     * 分组标识
-     */
+    @Schema(description = "分组标识")
     private String gid;
 
-    /**
-     * 有效期类型 0：永久有效 1：自定义
-     */
+    @Schema(description = "有效期类型", example = "0", allowableValues = {"0", "1"})
     private Integer validDateType;
 
-    /**
-     * 有效期
-     */
+    @Schema(description = "有效期")
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     private Date validDate;
 
-    /**
-     * 创建时间
-     */
+    @Schema(description = "创建时间")
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     private Date createTime;
 
-    /**
-     * 描述
-     */
+    @Schema(description = "描述")
     private String describe;
 
-
-    /**
-     * 图标
-     */
+    @Schema(description = "网站图标")
     private String favicon;
+
+    @Schema(description = "历史PV")
+    private Integer totalPv;
+
+    @Schema(description = "今日PV")
+    private Integer toDayPv;
+
+    @Schema(description = "历史UV")
+    private Integer totalUv;
+
+    @Schema(description = "今日UV")
+    private Integer toDayUv;
+
+    @Schema(description = "历史UIP")
+    private Integer totalUIp;
+
+    @Schema(description = "今日UIP")
+    private Integer toDayUIp;
 }

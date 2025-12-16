@@ -12,4 +12,7 @@ import lombok.EqualsAndHashCode;
 public class ShortLinkPageReqDTO extends Page<ShortLinkDO> {
     @Schema(description = "分组ID")
     private String gid;
+
+    @Schema(description = "排序字段")
+    private String orderTag;
 }
