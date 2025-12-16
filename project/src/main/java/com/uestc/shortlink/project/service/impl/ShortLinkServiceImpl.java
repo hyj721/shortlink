@@ -106,6 +106,9 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                 .validDate(requestParam.getValidDate())
                 .describe(requestParam.getDescribe())
                 .favicon(getFavicon(requestParam.getOriginUrl()))
+                .totalPv(0)
+                .totalUv(0)
+                .totalUip(0)
                 .build();
         ShortLinkGotoDO shortLinkGotoDO = ShortLinkGotoDO.builder()
                 .fullShortUrl(fullShortUrl)
@@ -336,6 +339,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
             statsDevice(fullShortUrl, gid, device);
             statsNetwork(fullShortUrl, gid, network);
             statsAccessLogs(linkAccessLogsDO);
+            baseMapper.incrementStats(gid, fullShortUrl, 1, uv, uip);
 
             LinkAccessStatsDO linkAccessStatsDO = LinkAccessStatsDO.builder()
                     .gid(gid)
