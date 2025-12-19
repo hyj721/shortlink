@@ -2,33 +2,17 @@ package com.uestc.shortlink.project.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.http.HttpUtil;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.uestc.shortlink.project.common.convention.exception.ClientException;
 import com.uestc.shortlink.project.common.convention.exception.ServiceException;
-import com.uestc.shortlink.project.dao.entity.LinkAccessStatsDO;
-import com.uestc.shortlink.project.dao.entity.LinkLocaleStatsDO;
-import com.uestc.shortlink.project.dao.entity.LinkBrowserStatsDO;
-import com.uestc.shortlink.project.dao.entity.LinkAccessLogsDO;
-import com.uestc.shortlink.project.dao.entity.LinkDeviceStatsDO;
-import com.uestc.shortlink.project.dao.entity.LinkNetworkStatsDO;
-import com.uestc.shortlink.project.dao.entity.LinkOsStatsDO;
-import com.uestc.shortlink.project.dao.entity.ShortLinkDO;
-import com.uestc.shortlink.project.dao.entity.ShortLinkGotoDO;
-import com.uestc.shortlink.project.dao.mapper.LinkAccessStatsMapper;
-import com.uestc.shortlink.project.dao.mapper.LinkLocaleStatsMapper;
-import com.uestc.shortlink.project.dao.mapper.LinkBrowserStatsMapper;
-import com.uestc.shortlink.project.dao.mapper.LinkAccessLogsMapper;
-import com.uestc.shortlink.project.dao.mapper.LinkDeviceStatsMapper;
-import com.uestc.shortlink.project.dao.mapper.LinkNetworkStatsMapper;
-import com.uestc.shortlink.project.dao.mapper.LinkOsStatsMapper;
-import com.uestc.shortlink.project.dao.mapper.ShortLinkGotoMapper;
-import com.uestc.shortlink.project.dao.mapper.ShortLinkMapper;
+import com.uestc.shortlink.project.dao.entity.*;
+import com.uestc.shortlink.project.dao.mapper.*;
 import com.uestc.shortlink.project.dto.req.ShortLinkCreateReqDTO;
 import com.uestc.shortlink.project.dto.req.ShortLinkPageReqDTO;
 import com.uestc.shortlink.project.dto.req.ShortLinkUpdateReqDTO;
@@ -83,6 +67,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
     private final LinkDeviceStatsMapper linkDeviceStatsMapper;
     private final LinkNetworkStatsMapper linkNetworkStatsMapper;
     private final LinkAccessLogsMapper linkAccessLogsMapper;
+    private final LinkStatsTodayMapper linkStatsTodayMapper;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Value("${short-link.stats.locale.amap-key}")
@@ -140,12 +125,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
 
     @Override
     public IPage<ShortLinkPageRespDTO> pageShortLink(ShortLinkPageReqDTO requestParam) {
-        LambdaQueryWrapper<ShortLinkDO> queryWrapper = Wrappers.lambdaQuery(ShortLinkDO.class)
-                .eq(ShortLinkDO::getGid, requestParam.getGid())
-                .eq(ShortLinkDO::getEnableStatus, 1)
-                .eq(ShortLinkDO::getDelFlag, 0)
-                .orderByDesc(ShortLinkDO::getCreateTime);
-        IPage<ShortLinkDO> resultPage = baseMapper.selectPage(requestParam, queryWrapper);
+        IPage<ShortLinkDO> resultPage = baseMapper.pageLink(requestParam);
         return resultPage.convert(each -> BeanUtil.toBean(each, ShortLinkPageRespDTO.class));
     }
 
@@ -340,6 +320,15 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
             statsNetwork(fullShortUrl, gid, network);
             statsAccessLogs(linkAccessLogsDO);
             baseMapper.incrementStats(gid, fullShortUrl, 1, uv, uip);
+            LinkStatsTodayDO linkStatsTodayDO = LinkStatsTodayDO.builder()
+                    .todayPv(1)
+                    .todayUv(uv)
+                    .todayUip(uip)
+                    .gid(gid)
+                    .fullShortUrl(fullShortUrl)
+                    .date(new Date())
+                    .build();
+            linkStatsTodayMapper.shortLinkTodayState(linkStatsTodayDO);
 
             LinkAccessStatsDO linkAccessStatsDO = LinkAccessStatsDO.builder()
                     .gid(gid)
