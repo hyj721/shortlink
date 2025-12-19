@@ -61,8 +61,8 @@ public class ShortLinkPageRespDTO {
     private Integer todayUv;
 
     @Schema(description = "历史UIP")
-    private Integer totalUIp;
+    private Integer totalUip;
 
     @Schema(description = "今日UIP")
-    private Integer todayUIp;
+    private Integer todayUip;
 }
