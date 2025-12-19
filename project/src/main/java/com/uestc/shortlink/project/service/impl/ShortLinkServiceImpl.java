@@ -311,6 +311,8 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                     .build();
 
             // ==================== 统计入库 ====================
+            // TODO BUG: uv/uip 是全量 Redis Key 的返回值（历史首次访问标志），
+            //  但 LinkStatsTodayDO 需要的是"当天首次访问"标志。
             int uv = statsUv(fullShortUrl, uvValue);
             int uip = statsUip(fullShortUrl, clientIp);
             statsLocale(fullShortUrl, gid, locale);
@@ -322,8 +324,8 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
             baseMapper.incrementStats(gid, fullShortUrl, 1, uv, uip);
             LinkStatsTodayDO linkStatsTodayDO = LinkStatsTodayDO.builder()
                     .todayPv(1)
-                    .todayUv(uv)
-                    .todayUip(uip)
+                    .todayUv(uv)   // TODO BUG: 应使用每日 UV 标志
+                    .todayUip(uip) // TODO BUG: 应使用每日 UIP 标志
                     .gid(gid)
                     .fullShortUrl(fullShortUrl)
                     .date(new Date())
