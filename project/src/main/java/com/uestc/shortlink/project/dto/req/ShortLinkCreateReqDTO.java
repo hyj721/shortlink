@@ -3,12 +3,14 @@ package com.uestc.shortlink.project.dto.req;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.Builder;
 import lombok.Data;
 
 import java.util.Date;
 
 @Data
 @Schema(description = "短链创建请求参数")
+@Builder
 public class ShortLinkCreateReqDTO {
 
     @Deprecated
@@ -35,7 +37,8 @@ public class ShortLinkCreateReqDTO {
     @TableField("`describe`")
     private String describe;
 
-    @Schema(description = "图标")
+    @Schema(description = "图标", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+    @Deprecated
     private String favicon;
 
 }

@@ -13,12 +13,11 @@ import com.uestc.shortlink.project.common.convention.exception.ClientException;
 import com.uestc.shortlink.project.common.convention.exception.ServiceException;
 import com.uestc.shortlink.project.dao.entity.*;
 import com.uestc.shortlink.project.dao.mapper.*;
+import com.uestc.shortlink.project.dto.req.ShortLinkBatchCreateReqDTO;
 import com.uestc.shortlink.project.dto.req.ShortLinkCreateReqDTO;
 import com.uestc.shortlink.project.dto.req.ShortLinkPageReqDTO;
 import com.uestc.shortlink.project.dto.req.ShortLinkUpdateReqDTO;
-import com.uestc.shortlink.project.dto.resp.ShortLinkCreateRespDTO;
-import com.uestc.shortlink.project.dto.resp.ShortLinkGroupCountResp;
-import com.uestc.shortlink.project.dto.resp.ShortLinkPageRespDTO;
+import com.uestc.shortlink.project.dto.resp.*;
 import com.uestc.shortlink.project.service.ShortLinkService;
 import com.uestc.shortlink.project.util.HashUtil;
 import com.uestc.shortlink.project.util.LinkUtil;
@@ -278,6 +277,38 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
             lock.unlock();
         }
 
+    }
+
+    @Override
+    public ShortLinkBatchCreateRespDTO batchCreateShortLink(ShortLinkBatchCreateReqDTO requestParam) {
+        List<String> originUrls = requestParam.getOriginUrls();
+        List<String> describes = requestParam.getDescribes();
+        List<ShortLinkBaseInfoRespDTO> result = new ArrayList<>();
+        for (int i = 0; i < originUrls.size(); i++) {
+            ShortLinkCreateReqDTO shortLinkCreateReqDTO = ShortLinkCreateReqDTO.builder()
+                    .originUrl(originUrls.get(i))
+                    .gid(requestParam.getGid())
+                    .createdType(requestParam.getCreatedType())
+                    .validDateType(requestParam.getValidDateType())
+                    .validDate(requestParam.getValidDate())
+                    .describe(describes.get(i))
+                    .build();
+            try {
+                ShortLinkCreateRespDTO shortLink = this.createShortLink(shortLinkCreateReqDTO);
+                ShortLinkBaseInfoRespDTO linkBaseInfoRespDTO = ShortLinkBaseInfoRespDTO.builder()
+                        .fullShortUrl(shortLink.getFullShortUrl())
+                        .originUrl(shortLink.getOriginUrl())
+                        .describe(describes.get(i))
+                        .build();
+                result.add(linkBaseInfoRespDTO);
+            } catch (Exception e) {
+                log.error("批量创建短链接失败，原始参数：{}", originUrls.get(i));
+            }
+        }
+        return ShortLinkBatchCreateRespDTO.builder()
+                .total(result.size())
+                .baseLinkInfos(result)
+                .build();
     }
 
     private void shortLinkStats(String fullShortUrl, String gid,

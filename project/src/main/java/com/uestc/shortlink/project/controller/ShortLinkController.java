@@ -4,9 +4,11 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.uestc.shortlink.project.common.annotation.ValidDateConsistency;
 import com.uestc.shortlink.project.common.convention.result.Result;
 import com.uestc.shortlink.project.common.convention.result.Results;
+import com.uestc.shortlink.project.dto.req.ShortLinkBatchCreateReqDTO;
 import com.uestc.shortlink.project.dto.req.ShortLinkCreateReqDTO;
 import com.uestc.shortlink.project.dto.req.ShortLinkPageReqDTO;
 import com.uestc.shortlink.project.dto.req.ShortLinkUpdateReqDTO;
+import com.uestc.shortlink.project.dto.resp.ShortLinkBatchCreateRespDTO;
 import com.uestc.shortlink.project.dto.resp.ShortLinkCreateRespDTO;
 import com.uestc.shortlink.project.dto.resp.ShortLinkGroupCountResp;
 import com.uestc.shortlink.project.dto.resp.ShortLinkPageRespDTO;
@@ -31,6 +33,13 @@ public class ShortLinkController {
     @ValidDateConsistency
     public Result<ShortLinkCreateRespDTO> createShortLink(@RequestBody ShortLinkCreateReqDTO requestParam) {
         return Results.success(shortLinkService.createShortLink(requestParam));
+    }
+
+    @Operation(summary = "批量创建短链接")
+    @PostMapping("/batch-create")
+    @ValidDateConsistency
+    public Result<ShortLinkBatchCreateRespDTO> batchCreateShortLink(@RequestBody ShortLinkBatchCreateReqDTO requestParam) {
+        return Results.success(shortLinkService.batchCreateShortLink(requestParam));
     }
 
     @Operation(summary = "修改短链接")
