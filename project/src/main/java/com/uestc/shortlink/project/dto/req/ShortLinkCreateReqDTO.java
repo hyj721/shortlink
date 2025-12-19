@@ -11,7 +11,8 @@ import java.util.Date;
 @Schema(description = "短链创建请求参数")
 public class ShortLinkCreateReqDTO {
 
-    @Schema(description = "域名")
+    @Deprecated
+    @Schema(description = "域名", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
     private String domain;
 
     @Schema(description = "原始链接")

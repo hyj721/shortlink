@@ -73,13 +73,16 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
     @Value("${short-link.stats.locale.amap-key}")
     private String amapKey;
 
+    @Value("${short-link.domain.default}")
+    private String defaultDomain;
+
     @Override
     public ShortLinkCreateRespDTO createShortLink(ShortLinkCreateReqDTO requestParam) {
         // 1.加盐哈希算法生成短链接
         String suffix = generateSuffix(requestParam);
-        String fullShortUrl = requestParam.getDomain() + "/" + suffix;
+        String fullShortUrl = defaultDomain + "/" + suffix;
         ShortLinkDO shortLinkDO = ShortLinkDO.builder()
-                .domain(requestParam.getDomain())
+                .domain(defaultDomain)
                 .shortUri(suffix)
                 .fullShortUrl(fullShortUrl)
                 .originUrl(requestParam.getOriginUrl())
@@ -558,7 +561,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
             // 加盐，让每次重试时的结果不同，否则是无意义重试
             originUrl += System.currentTimeMillis();
             shortUri = HashUtil.hashToBase62(originUrl);
-            String fullShortUrl = requestParam.getDomain() + "/" + shortUri;
+            String fullShortUrl = defaultDomain + "/" + shortUri;
             if (!shortUrlCreateBloomFilter.contains(fullShortUrl)) {
                 break;
             }

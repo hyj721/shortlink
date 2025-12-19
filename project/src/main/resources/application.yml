@@ -46,3 +46,5 @@ short-link:
   stats:
     locale:
       amap-key: ${AMAP_KEY:}
+  domain:
+    default: surl.com # 本地mock用短链接域名
