@@ -565,30 +565,42 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
         return shortUri;
     }
 
-    @SneakyThrows
+    /**
+     * 获取网站 Favicon 图标地址
+     * <p>
+     * 发生网络异常（如 403、超时等）时返回 null
+     *
+     * @param url 目标网站 URL
+     * @return Favicon URL，获取失败返回 null
+     */
     private String getFavicon(String url) {
-        Document document = Jsoup.connect(url)
-                .timeout(5000)
-                .userAgent("Mozilla/5.0")  // 有些网站需要 UA
-                .get();
+        try {
+            Document document = Jsoup.connect(url)
+                    .timeout(5000)
+                    .userAgent("Mozilla/5.0")  // 有些网站需要 UA
+                    .get();
 
-        // 按优先级查找
-        String[] selectors = {
-                "link[rel='icon']",
-                "link[rel='shortcut icon']",
-                "link[rel~=(?i)^(shortcut )?icon]",
-                "link[rel='apple-touch-icon']"  // iOS 图标作为备选
-        };
+            // 按优先级查找
+            String[] selectors = {
+                    "link[rel='icon']",
+                    "link[rel='shortcut icon']",
+                    "link[rel~=(?i)^(shortcut )?icon]",
+                    "link[rel='apple-touch-icon']"  // iOS 图标作为备选
+            };
 
-        for (String selector : selectors) {
-            Element link = document.select(selector).first();
-            if (link != null && link.hasAttr("href")) {
-                return link.attr("abs:href");
+            for (String selector : selectors) {
+                Element link = document.select(selector).first();
+                if (link != null && link.hasAttr("href")) {
+                    return link.attr("abs:href");
+                }
             }
-        }
 
-        // 最后尝试默认路径
-        URL targetUrl = new URL(url);
-        return targetUrl.getProtocol() + "://" + targetUrl.getHost() + "/favicon.ico";
+            // 最后尝试默认路径
+            URL targetUrl = new URL(url);
+            return targetUrl.getProtocol() + "://" + targetUrl.getHost() + "/favicon.ico";
+        } catch (Exception e) {
+            log.warn("获取 Favicon 失败: url={}, error={}", url, e.getMessage());
+            return null;
+        }
     }
 }
