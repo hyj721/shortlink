@@ -113,7 +113,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
         shortUrlCreateBloomFilter.add(fullShortUrl);
         // 缓存预热：创建短链接时直接写入 Redis
         stringRedisTemplate.opsForValue().set(
-                String.format(GOTO_SHORT_SHORT_LINK_KEY, fullShortUrl),
+                String.format(GOTO_SHORT_LINK_KEY, fullShortUrl),
                 requestParam.getOriginUrl(),
                 LinkUtil.getLinkCacheValidTime(requestParam.getValidDate()),
                 TimeUnit.MILLISECONDS
@@ -203,7 +203,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
     public void restoreLongLink(String shortUri, HttpServletRequest request, HttpServletResponse response) {
         String serverName = request.getServerName();
         String fullShortUrl = serverName + "/" + shortUri;
-        String originalUrl = stringRedisTemplate.opsForValue().get(String.format(GOTO_SHORT_SHORT_LINK_KEY, fullShortUrl));
+        String originalUrl = stringRedisTemplate.opsForValue().get(String.format(GOTO_SHORT_LINK_KEY, fullShortUrl));
         // 根据短链接获取原始链接，若原始链接不为空，则直接返回；否则查询数据库
         if (StringUtils.hasText(originalUrl)) {
             shortLinkStats(fullShortUrl, null, request, response);
@@ -220,11 +220,11 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
             return;
         }
 
-        RLock lock = redissonClient.getLock(String.format(LOCK_GOTO_SHORT_SHORT_LINK_KEY, fullShortUrl));
+        RLock lock = redissonClient.getLock(String.format(LOCK_GOTO_SHORT_LINK_KEY, fullShortUrl));
         lock.lock();
         try {
             // 二次检查是否有其他线程提前抢到redisson锁并建立好了缓存
-            originalUrl = stringRedisTemplate.opsForValue().get(String.format(GOTO_SHORT_SHORT_LINK_KEY, fullShortUrl));
+            originalUrl = stringRedisTemplate.opsForValue().get(String.format(GOTO_SHORT_LINK_KEY, fullShortUrl));
             if (StringUtils.hasText(originalUrl)) {
                 shortLinkStats(fullShortUrl, null, request, response);
                 response.sendRedirect(originalUrl);
@@ -266,7 +266,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
             }
             // 计算剩余有效期，回写缓存，跳转
             stringRedisTemplate.opsForValue().set(
-                    String.format(GOTO_SHORT_SHORT_LINK_KEY, fullShortUrl),
+                    String.format(GOTO_SHORT_LINK_KEY, fullShortUrl),
                     shortLinkDO.getOriginUrl(),
                     LinkUtil.getLinkCacheValidTime(shortLinkDO.getValidDate()),
                     TimeUnit.MILLISECONDS

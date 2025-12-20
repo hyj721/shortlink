@@ -19,7 +19,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
 import static com.uestc.shortlink.project.common.constant.RedisKeyConstant.GOTO_IS_NULL_SHORT_LINK_KEY;
-import static com.uestc.shortlink.project.common.constant.RedisKeyConstant.GOTO_SHORT_SHORT_LINK_KEY;
+import static com.uestc.shortlink.project.common.constant.RedisKeyConstant.GOTO_SHORT_LINK_KEY;
 
 /**
  * 回收站管理接口实现层
@@ -44,7 +44,7 @@ public class RecycleBinServiceImpl extends ServiceImpl<RecycleBinMapper, ShortLi
                 .set(ShortLinkDO::getEnableStatus, 0);  // 将启用状态设为禁用
         baseMapper.update(null, updateWrapper);
         stringRedisTemplate.delete(
-                String.format(GOTO_SHORT_SHORT_LINK_KEY, requestParam.getFullShortUrl())
+                String.format(GOTO_SHORT_LINK_KEY, requestParam.getFullShortUrl())
         );
     }
 
@@ -86,7 +86,7 @@ public class RecycleBinServiceImpl extends ServiceImpl<RecycleBinMapper, ShortLi
         baseMapper.update(null, updateWrapper);
         // 清理缓存（虽然回收站中的链接可能没有缓存，但为保险起见还是清理）
         stringRedisTemplate.delete(
-                String.format(GOTO_SHORT_SHORT_LINK_KEY, requestParam.getFullShortUrl())
+                String.format(GOTO_SHORT_LINK_KEY, requestParam.getFullShortUrl())
         );
         stringRedisTemplate.delete(
                 String.format(GOTO_IS_NULL_SHORT_LINK_KEY, requestParam.getFullShortUrl())
