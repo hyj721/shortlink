@@ -96,6 +96,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                 .totalPv(0)
                 .totalUv(0)
                 .totalUip(0)
+                .delTime(0L)
                 .build();
         ShortLinkGotoDO shortLinkGotoDO = ShortLinkGotoDO.builder()
                 .fullShortUrl(fullShortUrl)
@@ -144,6 +145,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                 .eq(ShortLinkDO::getGid, requestParam.getOriginGid())
                 .eq(ShortLinkDO::getFullShortUrl, requestParam.getFullShortUrl())
                 .eq(ShortLinkDO::getDelFlag, 0)
+                .eq(ShortLinkDO::getDelTime, 0L)
                 .eq(ShortLinkDO::getEnableStatus, 1);
         ShortLinkDO hasShortLinkDO = baseMapper.selectOne(queryWrapper);
         if (hasShortLinkDO == null) {
@@ -158,6 +160,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                     .eq(ShortLinkDO::getGid, requestParam.getOriginGid())
                     .eq(ShortLinkDO::getFullShortUrl, requestParam.getFullShortUrl())
                     .eq(ShortLinkDO::getDelFlag, 0)
+                    .eq(ShortLinkDO::getDelTime, 0L)
                     .eq(ShortLinkDO::getEnableStatus, 1)
                     .set(Objects.nonNull(requestParam.getOriginUrl()), ShortLinkDO::getOriginUrl, requestParam.getOriginUrl())
                     .set(Objects.nonNull(requestParam.getValidDateType()), ShortLinkDO::getValidDateType, requestParam.getValidDateType())
@@ -172,8 +175,10 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                     .eq(ShortLinkDO::getGid, requestParam.getOriginGid())
                     .eq(ShortLinkDO::getFullShortUrl, requestParam.getFullShortUrl())
                     .eq(ShortLinkDO::getDelFlag, 0)
+                    .eq(ShortLinkDO::getDelTime, 0L)
                     .eq(ShortLinkDO::getEnableStatus, 1)
-                    .set(ShortLinkDO::getDelFlag, 1);
+                    .set(ShortLinkDO::getDelFlag, 1)
+                    .set(ShortLinkDO::getDelTime, System.currentTimeMillis());
             baseMapper.update(null, deleteWrapper);
 
             // 3.2 创建新记录
@@ -190,6 +195,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                     .validDate(requestParam.getValidDate() != null ? requestParam.getValidDate() : hasShortLinkDO.getValidDate())
                     .describe(requestParam.getDescribe() != null ? requestParam.getDescribe() : hasShortLinkDO.getDescribe())
                     .favicon(requestParam.getFavicon() != null ? requestParam.getFavicon() : hasShortLinkDO.getFavicon())
+                    .delTime(0L)
                     .build();
             baseMapper.insert(newShortLinkDO);
         }
