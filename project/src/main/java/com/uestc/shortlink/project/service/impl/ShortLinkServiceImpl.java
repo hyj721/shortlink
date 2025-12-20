@@ -172,7 +172,8 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
         } else {
             RReadWriteLock readWriteLock = redissonClient.getReadWriteLock(String.format(LOCK_GID_UPDATE_KEY, requestParam.getFullShortUrl()));
             RLock rLock = readWriteLock.writeLock();
-            if (!rLock.tryLock()) {
+            boolean writeLocked = rLock.tryLock();
+            if (!writeLocked) {
                 throw new ServiceException("短链接正在被访问，请稍后再试...");
             }
             try {
@@ -413,8 +414,10 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                                 HttpServletRequest request, HttpServletResponse response) {
         RReadWriteLock readWriteLock = redissonClient.getReadWriteLock(String.format(LOCK_GID_UPDATE_KEY, fullShortUrl));
         RLock rLock = readWriteLock.readLock();
+        boolean readLocked = false;
         try {
-            if (!rLock.tryLock()) {
+            readLocked = rLock.tryLock();
+            if (!readLocked) {
                 // 未获取到锁，说明正在更新分组
                 // TODO: 将统计任务放入延迟队列
                 log.warn("短链接正在更新,统计任务稍后执行: {}", fullShortUrl);
@@ -486,7 +489,9 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
         } catch (Exception e) {
             log.error("短链接访问量统计异常", e);
         } finally {
-            rLock.unlock();
+            if (readLocked) {
+                rLock.unlock();
+            }
         }
     }
 
