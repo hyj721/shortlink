@@ -411,7 +411,15 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
 
     private void shortLinkStats(String fullShortUrl, String gid,
                                 HttpServletRequest request, HttpServletResponse response) {
+        RReadWriteLock readWriteLock = redissonClient.getReadWriteLock(String.format(LOCK_GID_UPDATE_KEY, fullShortUrl));
+        RLock rLock = readWriteLock.readLock();
         try {
+            if (!rLock.tryLock()) {
+                // 未获取到锁，说明正在更新分组
+                // TODO: 将统计任务放入延迟队列
+                log.warn("短链接正在更新,统计任务稍后执行: {}", fullShortUrl);
+                return;  // 不阻塞，直接返回让用户跳转
+            }
             // ==================== 数据准备 ====================
             if (!StringUtils.hasText(gid)) {
                 LambdaQueryWrapper<ShortLinkGotoDO> queryWrapper = Wrappers.lambdaQuery(ShortLinkGotoDO.class)
@@ -477,6 +485,8 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
             linkAccessStatsMapper.shortLinkAccessStats(linkAccessStatsDO);
         } catch (Exception e) {
             log.error("短链接访问量统计异常", e);
+        } finally {
+            rLock.unlock();
         }
     }
 
