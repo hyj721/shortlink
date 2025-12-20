@@ -82,7 +82,9 @@ public class RecycleBinServiceImpl extends ServiceImpl<RecycleBinMapper, ShortLi
                 .eq(ShortLinkDO::getGid, requestParam.getGid())
                 .eq(ShortLinkDO::getEnableStatus, 0)  // 只能删除回收站中的（禁用状态）
                 .eq(ShortLinkDO::getDelFlag, 0)
-                .set(ShortLinkDO::getDelFlag, 1);  // 软删除
+                .eq(ShortLinkDO::getDelTime, 0L)
+                .set(ShortLinkDO::getDelFlag, 1) // 软删除
+                .set(ShortLinkDO::getDelTime, System.currentTimeMillis());
         baseMapper.update(null, updateWrapper);
         // 清理缓存（虽然回收站中的链接可能没有缓存，但为保险起见还是清理）
         stringRedisTemplate.delete(
