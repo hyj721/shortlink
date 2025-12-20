@@ -193,6 +193,14 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                     .build();
             baseMapper.insert(newShortLinkDO);
         }
+
+        // 当有效期类型、有效期时间或原始链接发生变化时，删除缓存以保证一致性
+        if (!Objects.equals(hasShortLinkDO.getValidDateType(), requestParam.getValidDateType())
+                || !Objects.equals(hasShortLinkDO.getValidDate(), requestParam.getValidDate())
+                || (requestParam.getOriginUrl() != null && !Objects.equals(hasShortLinkDO.getOriginUrl(), requestParam.getOriginUrl()))) {
+            stringRedisTemplate.delete(String.format(GOTO_SHORT_LINK_KEY, requestParam.getFullShortUrl()));
+            stringRedisTemplate.delete(String.format(GOTO_IS_NULL_SHORT_LINK_KEY, requestParam.getFullShortUrl()));
+        }
     }
 
     /**
