@@ -3,14 +3,18 @@ package com.uestc.shortlink.project.dto.req;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.util.Date;
 
 @Data
-@Schema(description = "短链创建请求参数")
 @Builder
+@NoArgsConstructor
+@AllArgsConstructor
+@Schema(description = "短链创建请求参数")
 public class ShortLinkCreateReqDTO {
 
     @Deprecated
