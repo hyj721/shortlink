@@ -13,11 +13,13 @@ import com.uestc.shortlink.project.common.convention.exception.ClientException;
 import com.uestc.shortlink.project.common.convention.exception.ServiceException;
 import com.uestc.shortlink.project.dao.entity.*;
 import com.uestc.shortlink.project.dao.mapper.*;
+import com.uestc.shortlink.project.dto.biz.ShortLinkStatsRecordDTO;
 import com.uestc.shortlink.project.dto.req.ShortLinkBatchCreateReqDTO;
 import com.uestc.shortlink.project.dto.req.ShortLinkCreateReqDTO;
 import com.uestc.shortlink.project.dto.req.ShortLinkPageReqDTO;
 import com.uestc.shortlink.project.dto.req.ShortLinkUpdateReqDTO;
 import com.uestc.shortlink.project.dto.resp.*;
+import com.uestc.shortlink.project.mq.producer.DelayShortLinkStatsProducer;
 import com.uestc.shortlink.project.service.ShortLinkService;
 import com.uestc.shortlink.project.util.HashUtil;
 import com.uestc.shortlink.project.util.LinkUtil;
@@ -68,6 +70,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
     private final LinkNetworkStatsMapper linkNetworkStatsMapper;
     private final LinkAccessLogsMapper linkAccessLogsMapper;
     private final LinkStatsTodayMapper linkStatsTodayMapper;
+    private final DelayShortLinkStatsProducer delayShortLinkStatsProducer;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Value("${short-link.stats.locale.amap-key}")
@@ -305,7 +308,8 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
         String originalUrl = stringRedisTemplate.opsForValue().get(String.format(GOTO_SHORT_LINK_KEY, fullShortUrl));
         // 根据短链接获取原始链接，若原始链接不为空，则直接返回；否则查询数据库
         if (StringUtils.hasText(originalUrl)) {
-            shortLinkStats(fullShortUrl, null, request, response);
+            ShortLinkStatsRecordDTO statsRecord = buildLinkStatsRecordAndSetUser(fullShortUrl, request, response);
+            shortLinkStats(null, statsRecord);
             response.sendRedirect(originalUrl);
             return;
         }
@@ -325,7 +329,8 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
             // 二次检查是否有其他线程提前抢到redisson锁并建立好了缓存
             originalUrl = stringRedisTemplate.opsForValue().get(String.format(GOTO_SHORT_LINK_KEY, fullShortUrl));
             if (StringUtils.hasText(originalUrl)) {
-                shortLinkStats(fullShortUrl, null, request, response);
+                ShortLinkStatsRecordDTO statsRecord = buildLinkStatsRecordAndSetUser(fullShortUrl, request, response);
+                shortLinkStats(null, statsRecord);
                 response.sendRedirect(originalUrl);
                 return;
             }
@@ -370,7 +375,8 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                     LinkUtil.getLinkCacheValidTime(shortLinkDO.getValidDate()),
                     TimeUnit.MILLISECONDS
             );
-            shortLinkStats(fullShortUrl, gid, request, response);
+            ShortLinkStatsRecordDTO statsRecord = buildLinkStatsRecordAndSetUser(fullShortUrl, request, response);
+            shortLinkStats(gid, statsRecord);
             response.sendRedirect(shortLinkDO.getOriginUrl());
         } finally {
             lock.unlock();
@@ -410,32 +416,37 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                 .build();
     }
 
-    private void shortLinkStats(String fullShortUrl, String gid,
-                                HttpServletRequest request, HttpServletResponse response) {
+    @Override
+    public void shortLinkStats(String gid, ShortLinkStatsRecordDTO statsRecord) {
+        String fullShortUrl = statsRecord.getFullShortUrl();
         RReadWriteLock readWriteLock = redissonClient.getReadWriteLock(String.format(LOCK_GID_UPDATE_KEY, fullShortUrl));
         RLock rLock = readWriteLock.readLock();
         boolean readLocked = false;
+        readLocked = rLock.tryLock();
+        if (!readLocked) {
+            // 未获取到锁，说明正在更新分组
+            log.warn("短链接正在更新,统计任务稍后执行: {}", fullShortUrl);
+            delayShortLinkStatsProducer.send(statsRecord);
+            return;  // 不阻塞，直接返回让用户跳转
+        }
+
         try {
-            readLocked = rLock.tryLock();
-            if (!readLocked) {
-                // 未获取到锁，说明正在更新分组
-                // TODO: 将统计任务放入延迟队列
-                log.warn("短链接正在更新,统计任务稍后执行: {}", fullShortUrl);
-                return;  // 不阻塞，直接返回让用户跳转
-            }
-            // ==================== 数据准备 ====================
             if (!StringUtils.hasText(gid)) {
                 LambdaQueryWrapper<ShortLinkGotoDO> queryWrapper = Wrappers.lambdaQuery(ShortLinkGotoDO.class)
                         .eq(ShortLinkGotoDO::getFullShortUrl, fullShortUrl);
                 ShortLinkGotoDO shortLinkGotoDO = shortLinkGotoMapper.selectOne(queryWrapper);
                 gid = shortLinkGotoDO.getGid();
             }
-            String clientIp = LinkUtil.getClientIp(request);
-            String browser = LinkUtil.getBrowser(request);
-            String os = LinkUtil.getOs(request);
-            String device = LinkUtil.getDevice(request);
-            String network = LinkUtil.getNetwork(request);
-            String uvValue = getOrCreateUvValue(request, response);
+
+            String clientIp = statsRecord.getClientIp();
+            String browser = statsRecord.getBrowser();
+            String os = statsRecord.getOs();
+            String device = statsRecord.getDevice();
+            String network = statsRecord.getNetwork();
+            String uvValue = statsRecord.getUv();
+            Integer uvFirstFlag = statsRecord.getUvFirstFlag();
+            Integer uipFirstFlag = statsRecord.getUipFirstFlag();
+
             Map<String, String> locale = getLocaleByIp(clientIp);
             LocalDateTime now = LocalDateTime.now();
             String localeInLog = locale != null && !"unknown".equals(locale.get("province"))
@@ -456,19 +467,18 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
             // ==================== 统计入库 ====================
             // TODO BUG: uv/uip 是全量 Redis Key 的返回值（历史首次访问标志），
             //  但 LinkStatsTodayDO 需要的是"当天首次访问"标志。
-            int uv = statsUv(fullShortUrl, uvValue);
-            int uip = statsUip(fullShortUrl, clientIp);
             statsLocale(fullShortUrl, gid, locale);
             statsBrowser(fullShortUrl, gid, browser);
             statsOs(fullShortUrl, gid, os);
             statsDevice(fullShortUrl, gid, device);
             statsNetwork(fullShortUrl, gid, network);
             statsAccessLogs(linkAccessLogsDO);
-            baseMapper.incrementStats(gid, fullShortUrl, 1, uv, uip);
+
+            baseMapper.incrementStats(gid, fullShortUrl, 1, uvFirstFlag, uipFirstFlag);
             LinkStatsTodayDO linkStatsTodayDO = LinkStatsTodayDO.builder()
                     .todayPv(1)
-                    .todayUv(uv)   // TODO BUG: 应使用每日 UV 标志
-                    .todayUip(uip) // TODO BUG: 应使用每日 UIP 标志
+                    .todayUv(uvFirstFlag)   // TODO BUG: 应使用每日 UV 标志
+                    .todayUip(uipFirstFlag) // TODO BUG: 应使用每日 UIP 标志
                     .gid(gid)
                     .fullShortUrl(fullShortUrl)
                     .date(new Date())
@@ -480,8 +490,8 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                     .fullShortUrl(fullShortUrl)
                     .date(Date.from(now.toLocalDate().atStartOfDay(ZoneId.systemDefault()).toInstant()))
                     .pv(1)
-                    .uv(uv)
-                    .uip(uip)
+                    .uv(uvFirstFlag)
+                    .uip(uipFirstFlag)
                     .hour(now.getHour())
                     .weekday(now.getDayOfWeek().getValue())
                     .build();
@@ -489,10 +499,39 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
         } catch (Exception e) {
             log.error("短链接访问量统计异常", e);
         } finally {
-            if (readLocked) {
-                rLock.unlock();
-            }
+            rLock.unlock();
         }
+    }
+
+    /**
+     * 构建统计记录，并设置用户cookie到response中
+     *
+     * @param fullShortUrl
+     * @param request
+     * @param response
+     * @return
+     */
+    private ShortLinkStatsRecordDTO buildLinkStatsRecordAndSetUser(String fullShortUrl,
+                                                                   HttpServletRequest request,
+                                                                   HttpServletResponse response) {
+        String clientIp = LinkUtil.getClientIp(request);
+        String browser = LinkUtil.getBrowser(request);
+        String os = LinkUtil.getOs(request);
+        String device = LinkUtil.getDevice(request);
+        String network = LinkUtil.getNetwork(request);
+        String uvValue = getOrCreateUvValue(request, response);
+
+        return ShortLinkStatsRecordDTO.builder()
+                .fullShortUrl(fullShortUrl)
+                .clientIp(clientIp)
+                .os(os)
+                .browser(browser)
+                .device(device)
+                .network(network)
+                .uv(uvValue)
+                .uvFirstFlag(statsUv(fullShortUrl, uvValue))
+                .uipFirstFlag(statsUip(fullShortUrl, clientIp))
+                .build();
     }
 
     /**
@@ -533,6 +572,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
      *   │ return 1│              │ return 0│
      *   └─────────┘              └─────────┘
      * </pre>
+     *
      * @return 1 表示新访客，0 表示老访客
      */
     private int statsUv(String fullShortUrl, String uvValue) {
