@@ -529,8 +529,8 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                 .device(device)
                 .network(network)
                 .uv(uvValue)
-                .uvFirstFlag(statsUv(fullShortUrl, uvValue))
-                .uipFirstFlag(statsUip(fullShortUrl, clientIp))
+                .uvFirstFlag(verificationUv(fullShortUrl, uvValue))
+                .uipFirstFlag(verificationUip(fullShortUrl, clientIp))
                 .build();
     }
 
@@ -575,7 +575,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
      *
      * @return 1 表示新访客，0 表示老访客
      */
-    private int statsUv(String fullShortUrl, String uvValue) {
+    private int verificationUv(String fullShortUrl, String uvValue) {
         String uvKey = String.format(SHORT_LINK_STATS_UV_KEY, fullShortUrl);
         Long added = stringRedisTemplate.opsForSet().add(uvKey, uvValue);
         return (added != null && added > 0) ? 1 : 0;
@@ -588,7 +588,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
      *
      * @return 1 表示新 IP，0 表示已访问过的 IP
      */
-    private int statsUip(String fullShortUrl, String clientIp) {
+    private int verificationUip(String fullShortUrl, String clientIp) {
         String uipKey = String.format(SHORT_LINK_STATS_UIP_KEY, fullShortUrl);
         Long added = stringRedisTemplate.opsForSet().add(uipKey, clientIp);
         return (added != null && added > 0) ? 1 : 0;
