@@ -1,7 +1,9 @@
 package com.uestc.shortlink.project.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.core.util.StrUtil;
 import cn.hutool.http.HttpUtil;
+import com.uestc.shortlink.project.config.GotoDomainWhiteListConfiguration;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -71,6 +73,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
     private final LinkAccessLogsMapper linkAccessLogsMapper;
     private final LinkStatsTodayMapper linkStatsTodayMapper;
     private final DelayShortLinkStatsProducer delayShortLinkStatsProducer;
+    private final GotoDomainWhiteListConfiguration gotoDomainWhiteListConfig;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Value("${short-link.stats.locale.amap-key}")
@@ -81,6 +84,8 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
 
     @Override
     public ShortLinkCreateRespDTO createShortLink(ShortLinkCreateReqDTO requestParam) {
+        // 0. 白名单验证
+        verifyWhitelist(requestParam.getOriginUrl());
         // 1.加盐哈希算法生成短链接
         String suffix = generateSuffix(requestParam);
         String fullShortUrl = defaultDomain + "/" + suffix;
@@ -144,6 +149,10 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
     @Transactional(rollbackFor = Exception.class)
     @Override
     public void updateShortLink(ShortLinkUpdateReqDTO requestParam) {
+        // 0. 白名单验证（仅在 originUrl 变更时验证）
+        if (StrUtil.isNotBlank(requestParam.getOriginUrl())) {
+            verifyWhitelist(requestParam.getOriginUrl());
+        }
         // 1. 查询数据库中是否存在要修改的短链接
         LambdaQueryWrapper<ShortLinkDO> queryWrapper = Wrappers.lambdaQuery(ShortLinkDO.class)
                 .eq(ShortLinkDO::getGid, requestParam.getOriginGid())
@@ -790,6 +799,28 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
         } catch (Exception e) {
             log.warn("获取 Favicon 失败: url={}, error={}", url, e.getMessage());
             return null;
+        }
+    }
+
+    /**
+     * 验证目标 URL 域名是否在白名单中
+     *
+     * @param originUrl 目标 URL
+     * @throws ClientException 域名不在白名单中时抛出异常
+     */
+    private void verifyWhitelist(String originUrl) {
+        Boolean enable = gotoDomainWhiteListConfig.getEnable();
+        if (enable == null || !enable) {
+            return;
+        }
+        String domain = LinkUtil.extractDomain(originUrl);
+        if (StrUtil.isBlank(domain)) {
+            throw new ClientException("URL 格式不正确");
+        }
+        boolean allowed = gotoDomainWhiteListConfig.getDomains().stream()
+                .anyMatch(domain::endsWith);
+        if (!allowed) {
+            throw new ClientException("该域名不在白名单中，支持的域名：" + gotoDomainWhiteListConfig.getNames());
         }
     }
 }

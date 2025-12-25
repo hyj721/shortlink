@@ -48,3 +48,14 @@ short-link:
       amap-key: ${AMAP_KEY:}
   domain:
     default: surl.com # 本地mock用短链接域名
+  goto-domain:
+    white-list:
+      enable: true
+      names: '哔哩哔哩动画，知乎，小红书，掘金，博客园, 百度'
+      domains:
+        - bilibili.com
+        - zhihu.com
+        - xiaohongshu.com
+        - juejin.cn
+        - cnblogs.com
+        - baidu.com

@@ -1,7 +1,9 @@
 package com.uestc.shortlink.project.util;
 
+import cn.hutool.core.util.StrUtil;
 import jakarta.servlet.http.HttpServletRequest;
 
+import java.net.URI;
 import java.util.Date;
 import java.util.Optional;
 
@@ -11,6 +13,36 @@ import static com.uestc.shortlink.project.common.constant.ShortLinkConstant.DEFA
  * 短链接工具类
  */
 public class LinkUtil {
+
+    /**
+     * 从 URL 中提取域名
+     * <p>
+     * 支持 http/https 协议，返回主机域名（不包含端口）。
+     * 例如: https://www.bilibili.com/video/xxx -> bilibili.com
+     *
+     * @param url 完整 URL
+     * @return 域名（去除 www 前缀的主域名格式），解析失败返回空字符串
+     */
+    public static String extractDomain(String url) {
+        if (StrUtil.isBlank(url)) {
+            return "";
+        }
+        try {
+            URI uri = new URI(url);
+            String host = uri.getHost();
+            if (StrUtil.isBlank(host)) {
+                return "";
+            }
+            // 去除 www. 前缀
+            if (host.startsWith("www.")) {
+                host = host.substring(4);
+            }
+            return host.toLowerCase();
+        } catch (Exception e) {
+            return "";
+        }
+    }
+
 
     /**
      * 获取短链接缓存有效时间（毫秒）
