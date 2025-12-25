@@ -551,7 +551,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
             }
             String originUrl = requestParam.getOriginUrl();
             // 加盐，让每次重试时的结果不同，否则是无意义重试
-            originUrl += System.currentTimeMillis();
+            originUrl += UUID.randomUUID().toString();
             shortUri = HashUtil.hashToBase62(originUrl);
             String fullShortUrl = defaultDomain + "/" + shortUri;
             if (!shortUrlCreateBloomFilter.contains(fullShortUrl)) {
