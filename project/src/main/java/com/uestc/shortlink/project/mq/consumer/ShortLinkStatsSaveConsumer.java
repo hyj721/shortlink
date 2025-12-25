@@ -9,6 +9,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.uestc.shortlink.project.dao.entity.*;
 import com.uestc.shortlink.project.dao.mapper.*;
 import com.uestc.shortlink.project.dto.biz.ShortLinkStatsRecordDTO;
+import com.uestc.shortlink.project.mq.idempotent.MessageQueueIdempotentHandler;
 import com.uestc.shortlink.project.mq.producer.DelayShortLinkStatsProducer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -51,6 +52,7 @@ public class ShortLinkStatsSaveConsumer implements StreamListener<String, MapRec
     private final LinkStatsTodayMapper linkStatsTodayMapper;
     private final DelayShortLinkStatsProducer delayShortLinkStatsProducer;
     private final StringRedisTemplate stringRedisTemplate;
+    private final MessageQueueIdempotentHandler messageQueueIdempotentHandler;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Value("${short-link.stats.locale.amap-key}")
@@ -61,12 +63,36 @@ public class ShortLinkStatsSaveConsumer implements StreamListener<String, MapRec
     public void onMessage(MapRecord<String, String, String> message) {
         String stream = message.getStream();
         RecordId id = message.getId();
-        Map<String, String> producerMap = message.getValue();
-        ShortLinkStatsRecordDTO statsRecord = JSON.parseObject(producerMap.get("statsRecord"), ShortLinkStatsRecordDTO.class);
-        String gid = producerMap.get("gid");
+        String messageId = id.getValue();
 
-        actualSaveShortLinkStats(gid, statsRecord);
-        stringRedisTemplate.opsForStream().delete(Objects.requireNonNull(stream), id.getValue());
+        // 阶段1: 检查是否已完成处理
+        if (messageQueueIdempotentHandler.isMessageCompleted(messageId)) {
+            // 已处理完成，直接跳过
+            return;
+        }
+
+        // 阶段2: 尝试获取处理锁（标记为 PROCESSING）
+        if (!messageQueueIdempotentHandler.tryAcquireProcessingLock(messageId)) {
+            // 其他实例正在处理，抛异常让 MQ 稍后重试
+            throw new RuntimeException("消息正在被其他实例处理，等待重试: " + messageId);
+        }
+
+        try {
+            Map<String, String> producerMap = message.getValue();
+            ShortLinkStatsRecordDTO statsRecord = JSON.parseObject(producerMap.get("statsRecord"), ShortLinkStatsRecordDTO.class);
+            String gid = producerMap.get("gid");
+
+            actualSaveShortLinkStats(gid, statsRecord);
+
+            // 阶段3: 业务成功，标记为 COMPLETED
+            messageQueueIdempotentHandler.markAsCompleted(messageId);
+            stringRedisTemplate.opsForStream().delete(Objects.requireNonNull(stream), messageId);
+        } catch (Throwable e) {
+            // 业务失败，释放处理锁，允许 MQ 重试
+            messageQueueIdempotentHandler.releaseProcessingLock(messageId);
+            log.error("记录短链接监控数据异常", e);
+            throw e; // 重新抛出，让 MQ 感知失败并重试
+        }
 
     }
 
@@ -148,8 +174,6 @@ public class ShortLinkStatsSaveConsumer implements StreamListener<String, MapRec
                     .weekday(now.getDayOfWeek().getValue())
                     .build();
             linkAccessStatsMapper.shortLinkAccessStats(linkAccessStatsDO);
-        } catch (Exception e) {
-            log.error("短链接访问量统计异常", e);
         } finally {
             rLock.unlock();
         }
