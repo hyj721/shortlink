@@ -1,5 +1,6 @@
 package com.uestc.shortlink.project.controller;
 
+import com.alibaba.csp.sentinel.annotation.SentinelResource;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.uestc.shortlink.project.common.annotation.ValidDateConsistency;
 import com.uestc.shortlink.project.common.convention.result.Result;
@@ -12,6 +13,7 @@ import com.uestc.shortlink.project.dto.resp.ShortLinkBatchCreateRespDTO;
 import com.uestc.shortlink.project.dto.resp.ShortLinkCreateRespDTO;
 import com.uestc.shortlink.project.dto.resp.ShortLinkGroupCountResp;
 import com.uestc.shortlink.project.dto.resp.ShortLinkPageRespDTO;
+import com.uestc.shortlink.project.handler.CustomBlockHandler;
 import com.uestc.shortlink.project.service.ShortLinkService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -30,6 +32,11 @@ public class ShortLinkController {
 
     @Operation(summary = "创建短链接")
     @PostMapping("/create")
+    @SentinelResource(
+            value = "create_short-link",
+            blockHandler = "createShortLinkBlockHandlerMethod",
+            blockHandlerClass = CustomBlockHandler.class
+    )
     @ValidDateConsistency
     public Result<ShortLinkCreateRespDTO> createShortLink(@RequestBody ShortLinkCreateReqDTO requestParam) {
         return Results.success(shortLinkService.createShortLink(requestParam));
