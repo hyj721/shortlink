@@ -5,6 +5,8 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.uestc.shortlink.admin.common.biz.user.UserContext;
+import com.uestc.shortlink.admin.common.constant.RedisCacheConstant;
+import com.uestc.shortlink.admin.common.convention.exception.ClientException;
 import com.uestc.shortlink.admin.common.convention.result.Result;
 import com.uestc.shortlink.admin.dao.entity.GroupDO;
 import com.uestc.shortlink.admin.dao.mapper.GroupMapper;
@@ -18,6 +20,9 @@ import com.uestc.shortlink.admin.service.GroupService;
 import com.uestc.shortlink.admin.util.RandomGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -26,6 +31,11 @@ import java.util.List;
 @Slf4j
 @RequiredArgsConstructor
 public class GroupServiceImpl extends ServiceImpl<GroupMapper, GroupDO> implements GroupService {
+
+    @Value("${short-link.group.max-num}")
+    private Integer groupMaxNum;
+
+    private final RedissonClient redissonClient;
 
     ShortLinkRemoteService shortLinkRemoteService = new ShortLinkRemoteService() {
     };
@@ -37,17 +47,28 @@ public class GroupServiceImpl extends ServiceImpl<GroupMapper, GroupDO> implemen
 
     @Override
     public void saveGroup(String username, String groupName) {
-        String gid;
-        do {
-            gid = RandomGenerator.generateGid();
-        } while (hasGid(username, gid));
+        RLock lock = redissonClient.getLock(String.format(RedisCacheConstant.LOCK_GROUP_CREATE_KEY, username));
+        lock.lock();
+        try {
+            if (baseMapper.selectCount(Wrappers.lambdaQuery(GroupDO.class)
+                    .eq(GroupDO::getUsername, username)
+                    .eq(GroupDO::getDelFlag, 0)) >= groupMaxNum) {
+                throw new ClientException(String.format("分组数量已达上限（最多 %d 个）", groupMaxNum));
+            }
+            String gid;
+            do {
+                gid = RandomGenerator.generateGid();
+            } while (hasGid(username, gid));
 
-        baseMapper.insert(GroupDO.builder()
-                .gid(gid)
-                .name(groupName)
-                .username(username)
-                .sortOrder(0)
-                .build());
+            baseMapper.insert(GroupDO.builder()
+                    .gid(gid)
+                    .name(groupName)
+                    .username(username)
+                    .sortOrder(0)
+                    .build());
+        } finally {
+            lock.unlock();
+        }
     }
 
     @Override
