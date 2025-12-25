@@ -74,6 +74,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
     private String defaultDomain;
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public ShortLinkCreateRespDTO createShortLink(ShortLinkCreateReqDTO requestParam) {
         // 0. 白名单验证
         verifyWhitelist(requestParam.getOriginUrl());
