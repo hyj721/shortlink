@@ -74,9 +74,9 @@ public class ValidDateConsistencyAspect {
                 if (validDate == null) {
                     throw new ClientException("有效期类型为限时时，有效期不能为空");
                 }
-                if (validDate.before(new Date())) {
-                    throw new ClientException("有效期必须晚于当前时间");
-                }
+                // if (validDate.before(new Date())) {
+                //     throw new ClientException("有效期必须晚于当前时间");
+                // }
             }
         } catch (IllegalAccessException e) {
             log.error("反射访问 validDateType/validDate 字段失败", e);
