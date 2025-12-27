@@ -1,4 +1,6 @@
 spring:
+  application:
+    name: short-link-project
   main:
     banner-mode: off
   datasource:
@@ -17,6 +19,10 @@ spring:
     view:
       prefix: /templates/
       suffix: .html
+  cloud:
+    nacos:
+      discovery:
+        server-addr: 127.0.0.1:8848
 server:
   port: 8001
 
