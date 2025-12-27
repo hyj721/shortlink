@@ -1,2 +1,38 @@
 server:
   port: 8000
+
+spring:
+  application:
+    name: short-link-gateway
+  data:
+    redis:
+      host: 127.0.0.1
+      port: 6379
+      password: redis
+  cloud:
+    nacos:
+      discovery:
+        server-addr: 127.0.0.1:8848
+    gateway:
+      routes:
+        # Admin 服务路由
+        - id: admin-service
+          uri: lb://short-link-admin
+          predicates:
+            - Path=/api/short-link/admin/**
+
+        # Project 服务路由 (短链接核心服务)
+        - id: project-service
+          uri: lb://short-link-project
+          predicates:
+            - Path=/api/short-link/v1/**
+
+# Sa-Token 配置 (与 Admin 保持一致)
+sa-token:
+  token-name: token
+  timeout: 2592000
+  active-timeout: -1
+  is-concurrent: true
+  is-share: false
+  token-style: uuid
+  is-log: true

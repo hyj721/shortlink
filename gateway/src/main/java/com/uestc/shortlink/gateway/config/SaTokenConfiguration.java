@@ -1,0 +1,87 @@
+package com.uestc.shortlink.gateway.config;
+
+import cn.dev33.satoken.context.SaHolder;
+import cn.dev33.satoken.reactor.filter.SaReactorFilter;
+import cn.dev33.satoken.router.SaRouter;
+import cn.dev33.satoken.stp.StpUtil;
+import com.alibaba.fastjson2.JSON;
+import com.uestc.shortlink.gateway.dto.GatewayErrorResult;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpStatus;
+
+import java.util.List;
+
+/**
+ * Sa-Token 配置类
+ * 在 SaReactorFilter 中只做 Token 验证，用户信息由下游服务自行获取
+ */
+@Slf4j
+@Configuration
+public class SaTokenConfiguration {
+
+    /**
+     * 白名单路径
+     */
+    private static final List<String> WHITE_PATH_LIST = List.of(
+            "/api/short-link/admin/v1/user/login",
+            "/api/short-link/admin/v1/user/has-username"
+    );
+
+    /**
+     * 注册 Sa-Token 全局过滤器
+     */
+    @Bean
+    public SaReactorFilter getSaReactorFilter() {
+        return new SaReactorFilter()
+                // 拦截所有路由
+                .addInclude("/**")
+                // 认证函数
+                .setAuth(obj -> {
+                    String path = SaHolder.getRequest().getRequestPath();
+                    String method = SaHolder.getRequest().getMethod();
+
+                    log.info("Gateway 请求: {} {}", method, path);
+
+                    // 1. 白名单路径直接放行
+                    if (isWhitelist(path)) {
+                        log.info("白名单路径，放行: {}", path);
+                        SaRouter.stop();
+                        return;
+                    }
+
+                    // 2. POST /api/short-link/admin/v1/user 是注册接口，放行
+                    if ("POST".equalsIgnoreCase(method) && "/api/short-link/admin/v1/user".equals(path)) {
+                        log.info("注册接口，放行: {}", path);
+                        SaRouter.stop();
+                        return;
+                    }
+
+                    // 3. 验证登录状态
+                    String tokenValue = StpUtil.getTokenValue();
+                    log.info("Token 验证 - path={}, token={}",
+                            path,
+                            tokenValue != null ? tokenValue : "无token");
+
+                    StpUtil.checkLogin();
+                    log.info("Token 验证通过: {}", path);
+                })
+                // 异常处理
+                .setError(e -> {
+                    log.warn("Token 验证失败: {}", e.getMessage());
+                    GatewayErrorResult errorResult = GatewayErrorResult.builder()
+                            .status(HttpStatus.UNAUTHORIZED.value())
+                            .message("未登录或登录已过期")
+                            .build();
+                    return JSON.toJSONString(errorResult);
+                });
+    }
+
+    /**
+     * 判断是否为白名单路径
+     */
+    private boolean isWhitelist(String path) {
+        return WHITE_PATH_LIST.stream().anyMatch(path::startsWith);
+    }
+}
