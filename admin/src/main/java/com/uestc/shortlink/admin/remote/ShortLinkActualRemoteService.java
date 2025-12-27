@@ -45,7 +45,7 @@ public interface ShortLinkActualRemoteService {
      * @return 查询短链接响应
      */
     @GetMapping("/api/short-link/v1/page")
-    Result<IPage<ShortLinkPageRespDTO>> pageShortLink(@SpringQueryMap ShortLinkPageReqDTO requestParam);
+    Result<Page<ShortLinkPageRespDTO>> pageShortLink(@SpringQueryMap ShortLinkPageReqDTO requestParam);
 
     /**
      * 获取分组内短链接数量
@@ -114,7 +114,7 @@ public interface ShortLinkActualRemoteService {
      * @return 短链接访问记录
      */
     @GetMapping("/api/short-link/v1/stats/access-record")
-    Result<IPage<ShortLinkStatsAccessRecordRespDTO>> shortLinkStatsAccessRecord(@SpringQueryMap ShortLinkStatsAccessRecordReqDTO requestParam);
+    Result<Page<ShortLinkStatsAccessRecordRespDTO>> shortLinkStatsAccessRecord(@SpringQueryMap ShortLinkStatsAccessRecordReqDTO requestParam);
 
     /**
      * 批量创建短链接
