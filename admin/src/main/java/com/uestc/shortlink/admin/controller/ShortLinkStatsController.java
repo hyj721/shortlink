@@ -2,7 +2,7 @@ package com.uestc.shortlink.admin.controller;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.uestc.shortlink.admin.common.convention.result.Result;
-import com.uestc.shortlink.admin.remote.dto.ShortLinkRemoteService;
+import com.uestc.shortlink.admin.remote.ShortLinkRemoteService;
 import com.uestc.shortlink.admin.remote.dto.req.ShortLinkStatsAccessRecordReqDTO;
 import com.uestc.shortlink.admin.remote.dto.req.ShortLinkStatsReqDTO;
 import com.uestc.shortlink.admin.remote.dto.resp.ShortLinkStatsAccessRecordRespDTO;

@@ -1,4 +1,4 @@
-package com.uestc.shortlink.admin.remote.dto;
+package com.uestc.shortlink.admin.remote;
 
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.http.HttpUtil;

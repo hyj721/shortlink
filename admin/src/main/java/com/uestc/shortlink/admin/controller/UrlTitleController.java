@@ -1,7 +1,7 @@
 package com.uestc.shortlink.admin.controller;
 
 import com.uestc.shortlink.admin.common.convention.result.Result;
-import com.uestc.shortlink.admin.remote.dto.ShortLinkRemoteService;
+import com.uestc.shortlink.admin.remote.ShortLinkRemoteService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;

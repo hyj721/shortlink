@@ -8,7 +8,7 @@ import com.uestc.shortlink.admin.common.convention.exception.ServiceException;
 import com.uestc.shortlink.admin.common.convention.result.Result;
 import com.uestc.shortlink.admin.dao.entity.GroupDO;
 import com.uestc.shortlink.admin.dao.mapper.GroupMapper;
-import com.uestc.shortlink.admin.remote.dto.ShortLinkRemoteService;
+import com.uestc.shortlink.admin.remote.ShortLinkRemoteService;
 import com.uestc.shortlink.admin.remote.dto.req.ShortLinkRecycleBinPageReqDTO;
 import com.uestc.shortlink.admin.remote.dto.resp.ShortLinkPageRespDTO;
 import com.uestc.shortlink.admin.service.RecycleBinService;
