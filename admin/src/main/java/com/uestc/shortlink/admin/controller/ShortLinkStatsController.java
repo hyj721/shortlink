@@ -2,7 +2,7 @@ package com.uestc.shortlink.admin.controller;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.uestc.shortlink.admin.common.convention.result.Result;
-import com.uestc.shortlink.admin.remote.ShortLinkRemoteService;
+import com.uestc.shortlink.admin.remote.ShortLinkActualRemoteService;
 import com.uestc.shortlink.admin.remote.dto.req.ShortLinkStatsAccessRecordReqDTO;
 import com.uestc.shortlink.admin.remote.dto.req.ShortLinkStatsReqDTO;
 import com.uestc.shortlink.admin.remote.dto.resp.ShortLinkStatsAccessRecordRespDTO;
@@ -20,22 +20,18 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/short-link/admin/v1")
 public class ShortLinkStatsController {
 
-    /**
-     * 后续重构为 SpringCloud Feign 调用
-     */
-    ShortLinkRemoteService shortLinkRemoteService = new ShortLinkRemoteService() {
-    };
+    private final ShortLinkActualRemoteService shortLinkActualRemoteService;
 
     @Operation(summary = "访问单个短链接指定时间内监控数据")
     @GetMapping("/stats")
     public Result<ShortLinkStatsRespDTO> shortLinkStats(ShortLinkStatsReqDTO requestParam) {
-        return shortLinkRemoteService.oneShortLinkStats(requestParam);
+        return shortLinkActualRemoteService.oneShortLinkStats(requestParam);
     }
 
     @Operation(summary = "访问单个短链接指定时间段内访问记录")
     @GetMapping("/stats/access-record")
     public Result<IPage<ShortLinkStatsAccessRecordRespDTO>> shortLinkStatsAccessRecord(ShortLinkStatsAccessRecordReqDTO requestParam) {
-        return shortLinkRemoteService.shortLinkStatsAccessRecord(requestParam);
+        return shortLinkActualRemoteService.shortLinkStatsAccessRecord(requestParam);
     }
 }
 

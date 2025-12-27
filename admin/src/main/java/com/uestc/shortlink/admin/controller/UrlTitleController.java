@@ -1,7 +1,7 @@
 package com.uestc.shortlink.admin.controller;
 
 import com.uestc.shortlink.admin.common.convention.result.Result;
-import com.uestc.shortlink.admin.remote.ShortLinkRemoteService;
+import com.uestc.shortlink.admin.remote.ShortLinkActualRemoteService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -17,12 +17,11 @@ import org.springframework.web.bind.annotation.RestController;
 @Tag(name = "URL 标题管理接口")
 public class UrlTitleController {
 
-    ShortLinkRemoteService shortLinkRemoteService = new ShortLinkRemoteService() {
-    };
+    private final ShortLinkActualRemoteService shortLinkActualRemoteService;
 
     @Operation(summary = "根据 URL 获取网站标题")
     @GetMapping("/api/short-link/admin/v1/title")
     public Result<String> getTitleByUrl(@RequestParam("url") String url) {
-        return shortLinkRemoteService.getTitleByUrl(url);
+        return shortLinkActualRemoteService.getTitleByUrl(url);
     }
 }

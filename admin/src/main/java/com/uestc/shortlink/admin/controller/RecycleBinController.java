@@ -1,9 +1,9 @@
 package com.uestc.shortlink.admin.controller;
 
-import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.uestc.shortlink.admin.common.convention.result.Result;
 import com.uestc.shortlink.admin.common.convention.result.Results;
-import com.uestc.shortlink.admin.remote.ShortLinkRemoteService;
+import com.uestc.shortlink.admin.remote.ShortLinkActualRemoteService;
 import com.uestc.shortlink.admin.remote.dto.req.RecycleBinDeleteReqDTO;
 import com.uestc.shortlink.admin.remote.dto.req.RecycleBinRecoverReqDTO;
 import com.uestc.shortlink.admin.remote.dto.req.RecycleBinSaveReqDTO;
@@ -21,12 +21,7 @@ import org.springframework.web.bind.annotation.*;
 @Tag(name = "回收站管理接口")
 public class RecycleBinController {
 
-    /**
-     * 后续重构为 SpringCloud Feign 调用
-     */
-    ShortLinkRemoteService shortLinkRemoteService = new ShortLinkRemoteService() {
-    };
-
+    private final ShortLinkActualRemoteService shortLinkActualRemoteService;
     private final RecycleBinService recycleBinService;
 
     /**
@@ -35,27 +30,27 @@ public class RecycleBinController {
     @PostMapping("/save")
     @Operation(summary = "短链接移动至回收站")
     public Result<Void> saveRecycleBin(@RequestBody RecycleBinSaveReqDTO requestParam) {
-        shortLinkRemoteService.saveRecycleBin(requestParam);
+        shortLinkActualRemoteService.saveRecycleBin(requestParam);
         return Results.success();
     }
 
     @Operation(summary = "分页查询回收站短链接")
     @GetMapping("/page")
-    public Result<IPage<ShortLinkPageRespDTO>> pageShortLink(ShortLinkRecycleBinPageReqDTO requestParam) {
+    public Result<Page<ShortLinkPageRespDTO>> pageShortLink(ShortLinkRecycleBinPageReqDTO requestParam) {
         return recycleBinService.pageRecycleBinShortLink(requestParam);
     }
 
     @Operation(summary = "恢复回收站短链接")
     @PostMapping("/recover")
     public Result<Void> recoverShortLink(@RequestBody RecycleBinRecoverReqDTO requestParam) {
-        shortLinkRemoteService.recoverRecycleBin(requestParam);
+        shortLinkActualRemoteService.recoverRecycleBin(requestParam);
         return Results.success();
     }
 
     @Operation(summary = "从回收站删除短链接")
     @PostMapping("/remove")
     public Result<Void> removeShortLink(@RequestBody RecycleBinDeleteReqDTO requestParam) {
-        shortLinkRemoteService.removeRecycleBin(requestParam);
+        shortLinkActualRemoteService.removeRecycleBin(requestParam);
         return Results.success();
     }
 }

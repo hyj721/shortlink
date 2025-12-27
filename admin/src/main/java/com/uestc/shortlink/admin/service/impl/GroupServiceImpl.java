@@ -14,7 +14,7 @@ import com.uestc.shortlink.admin.dto.req.ShortLinkGroupSaveReqDTO;
 import com.uestc.shortlink.admin.dto.req.ShortLinkGroupSortReqDTO;
 import com.uestc.shortlink.admin.dto.req.ShortLinkGroupUpdateReqDTO;
 import com.uestc.shortlink.admin.dto.res.ShortLinkGroupRespDTO;
-import com.uestc.shortlink.admin.remote.ShortLinkRemoteService;
+import com.uestc.shortlink.admin.remote.ShortLinkActualRemoteService;
 import com.uestc.shortlink.admin.remote.dto.resp.ShortLinkGroupCountResp;
 import com.uestc.shortlink.admin.service.GroupService;
 import com.uestc.shortlink.admin.util.RandomGenerator;
@@ -37,8 +37,7 @@ public class GroupServiceImpl extends ServiceImpl<GroupMapper, GroupDO> implemen
 
     private final RedissonClient redissonClient;
 
-    ShortLinkRemoteService shortLinkRemoteService = new ShortLinkRemoteService() {
-    };
+    private final ShortLinkActualRemoteService shortLinkActualRemoteService;
 
     @Override
     public void saveGroup(ShortLinkGroupSaveReqDTO requestParam) {
@@ -81,7 +80,7 @@ public class GroupServiceImpl extends ServiceImpl<GroupMapper, GroupDO> implemen
         List<GroupDO> groupDOS = baseMapper.selectList(queryWrapper);
 
         // 2. 调用远程服务获取每个分组的短链接数量
-        Result<List<ShortLinkGroupCountResp>> listResult = shortLinkRemoteService
+        Result<List<ShortLinkGroupCountResp>> listResult = shortLinkActualRemoteService
                 .listGroupShortLinkCount(groupDOS.stream().map(GroupDO::getGid).toList());
 
         // 3. 组装返回结果，匹配每个分组对应的短链接数量
