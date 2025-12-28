@@ -8,9 +8,9 @@ spring:
     url: jdbc:shardingsphere:classpath:shardingsphere-config-${database.env:dev}.yml
   data:
     redis:
-      host: 127.0.0.1
-      port: 6379
-      password: redis
+      host: ${REDIS_HOST:127.0.0.1}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:redis}
       stream:
         short-link-stats:
           topic: short-link:stats-stream
@@ -22,7 +22,7 @@ spring:
   cloud:
     nacos:
       discovery:
-        server-addr: 127.0.0.1:8848
+        server-addr: ${NACOS_ADDR:127.0.0.1:8848}
 server:
   port: 8001
 

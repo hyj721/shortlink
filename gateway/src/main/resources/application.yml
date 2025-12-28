@@ -6,13 +6,13 @@ spring:
     name: short-link-gateway
   data:
     redis:
-      host: 127.0.0.1
-      port: 6379
-      password: redis
+      host: ${REDIS_HOST:127.0.0.1}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:redis}
   cloud:
     nacos:
       discovery:
-        server-addr: 127.0.0.1:8848
+        server-addr: ${NACOS_ADDR:127.0.0.1:8848}
     gateway:
       routes:
         # Admin 服务路由
