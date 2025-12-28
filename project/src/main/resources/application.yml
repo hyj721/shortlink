@@ -61,11 +61,11 @@ short-link:
   goto-domain:
     white-list:
       enable: true
-      names: '哔哩哔哩动画，知乎，小红书，掘金，博客园, 百度'
+      names: '哔哩哔哩动画，知乎，小红书，掘金，博客园, 豆瓣'
       domains:
         - bilibili.com
         - zhihu.com
         - xiaohongshu.com
         - juejin.cn
         - cnblogs.com
-        - baidu.com
+        - douban.com

@@ -72,7 +72,7 @@ public class ValidDateConsistencyAspect {
             } else if (validDateType == VALID_DATE_TYPE_CUSTOM) {
                 // 限时有效：校验 validDate
                 if (validDate == null) {
-                    throw new ClientException("有效期类型为限时时，有效期不能为空");
+                    throw new ClientException("有效期类型为自定义时，有效期不能为空");
                 }
                 // if (validDate.before(new Date())) {
                 //     throw new ClientException("有效期必须晚于当前时间");

@@ -68,7 +68,7 @@ public class UserController {
     }
 
     @Operation(summary = "用户登出")
-    @PostMapping("/user/logout")
+    @DeleteMapping("/user/logout")
     public Result<Void> logout() {
         userService.logout();
         return Results.success();
