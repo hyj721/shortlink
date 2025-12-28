@@ -5,16 +5,15 @@ WORKDIR /app
 
 # 复制依赖文件
 COPY package*.json ./
-COPY pnpm-lock.yaml* ./
 
-# 安装 pnpm 并安装依赖
-RUN npm install -g pnpm && pnpm install --frozen-lockfile
+# 安装依赖
+RUN npm ci
 
 # 复制源代码
 COPY . .
 
 # 构建生产版本
-RUN pnpm build
+RUN npm run build
 
 # 第二阶段：运行
 FROM nginx:alpine
@@ -30,3 +29,4 @@ EXPOSE 80
 
 # 启动 nginx
 CMD ["nginx", "-g", "daemon off;"]
+
