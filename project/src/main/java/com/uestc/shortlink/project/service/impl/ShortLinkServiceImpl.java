@@ -159,6 +159,10 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
 
         // 2. 判断是否同组：新gid为空或与原gid相同时视为同组
         boolean sameGroup = !StringUtils.hasText(requestParam.getGid()) || Objects.equals(hasShortLinkDO.getGid(), requestParam.getGid());
+        // 判断是否需要清空有效期：validDateType为0（永久有效）时，validDate应为null
+        boolean shouldClearValidDate = Objects.nonNull(requestParam.getValidDateType()) 
+                && requestParam.getValidDateType() == 0;
+        
         if (sameGroup) {
             // gid相同，直接更新
             LambdaUpdateWrapper<ShortLinkDO> updateWrapper = Wrappers.lambdaUpdate(ShortLinkDO.class)
@@ -169,7 +173,9 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                     .eq(ShortLinkDO::getEnableStatus, 1)
                     .set(Objects.nonNull(requestParam.getOriginUrl()), ShortLinkDO::getOriginUrl, requestParam.getOriginUrl())
                     .set(Objects.nonNull(requestParam.getValidDateType()), ShortLinkDO::getValidDateType, requestParam.getValidDateType())
-                    .set(Objects.nonNull(requestParam.getValidDate()), ShortLinkDO::getValidDate, requestParam.getValidDate())
+                    // 如果是永久有效（type=0），显式将validDate置为null；否则按原逻辑更新
+                    .set(shouldClearValidDate, ShortLinkDO::getValidDate, null)
+                    .set(!shouldClearValidDate && Objects.nonNull(requestParam.getValidDate()), ShortLinkDO::getValidDate, requestParam.getValidDate())
                     .set(Objects.nonNull(requestParam.getDescribe()), ShortLinkDO::getDescribe, requestParam.getDescribe())
                     .set(Objects.nonNull(requestParam.getFavicon()), ShortLinkDO::getFavicon, requestParam.getFavicon());
             baseMapper.update(null, updateWrapper);
@@ -204,7 +210,8 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                         .enableStatus(hasShortLinkDO.getEnableStatus())
                         .createdType(hasShortLinkDO.getCreatedType())
                         .validDateType(requestParam.getValidDateType() != null ? requestParam.getValidDateType() : hasShortLinkDO.getValidDateType())
-                        .validDate(requestParam.getValidDate() != null ? requestParam.getValidDate() : hasShortLinkDO.getValidDate())
+                        // 如果是永久有效（type=0），validDate置为null；否则按原逻辑处理
+                        .validDate(shouldClearValidDate ? null : (requestParam.getValidDate() != null ? requestParam.getValidDate() : hasShortLinkDO.getValidDate()))
                         .describe(requestParam.getDescribe() != null ? requestParam.getDescribe() : hasShortLinkDO.getDescribe())
                         .favicon(requestParam.getFavicon() != null ? requestParam.getFavicon() : hasShortLinkDO.getFavicon())
                         .delTime(0L)
