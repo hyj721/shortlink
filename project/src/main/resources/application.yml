@@ -57,7 +57,7 @@ short-link:
     locale:
       amap-key: ${AMAP_KEY:}
   domain:
-    default: surl.com # 本地mock用短链接域名
+    default: ${SHORT_LINK_DOMAIN:surl.com}
   goto-domain:
     white-list:
       enable: true

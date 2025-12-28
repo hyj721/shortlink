@@ -93,6 +93,7 @@ services:
       - NACOS_ADDR=nacos:8848
       - DATABASE_ENV=docker
       - AMAP_KEY=${AMAP_KEY}
+      - SHORT_LINK_DOMAIN=${SHORT_LINK_DOMAIN}
     ports:
       - "8001:8001"
     networks:
