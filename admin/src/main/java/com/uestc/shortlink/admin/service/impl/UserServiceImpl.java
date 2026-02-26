@@ -6,9 +6,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.uestc.shortlink.admin.common.biz.user.UserContext;
-import com.uestc.shortlink.admin.common.biz.user.UserInfoDTO;
 import com.uestc.shortlink.admin.common.constant.RedisCacheConstant;
 import com.uestc.shortlink.admin.common.convention.exception.ClientException;
 import com.uestc.shortlink.admin.common.enums.UserErrorCodeEnum;
@@ -30,6 +28,9 @@ import org.springframework.dao.DuplicateKeyException;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
+import java.util.HashMap;
+import java.util.Map;
+
 @Service
 @Slf4j
 @RequiredArgsConstructor
@@ -39,7 +40,6 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, UserDO> implements 
     private final RedissonClient redissonClient;
     private final StringRedisTemplate stringRedisTemplate;
     private final GroupService groupService;
-    private static final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
     public UserRespDTO getUserByUsername(String username) {
@@ -115,11 +115,11 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, UserDO> implements 
             throw new ClientException("用户不存在");
         }
         StpUtil.login(userDO.getUsername());
-        UserInfoDTO userInfo = UserInfoDTO.builder()
-                .userId(userDO.getId())
-                .username(userDO.getUsername())
-                .realName(userDO.getRealName())
-                .build();
+        // 使用基础类型存储到 Session，避免网关反序列化时依赖 admin 模块 DTO 类型
+        Map<String, Object> userInfo = new HashMap<>();
+        userInfo.put("userId", userDO.getId());
+        userInfo.put("username", userDO.getUsername());
+        userInfo.put("realName", userDO.getRealName());
         StpUtil.getSession().set("userInfo", userInfo);
         return new UserLoginRespDTO(StpUtil.getTokenValue());
     }

@@ -1,10 +1,12 @@
 package com.uestc.shortlink.gateway.config;
 
 import cn.dev33.satoken.context.SaHolder;
+import cn.dev33.satoken.reactor.context.SaReactorSyncHolder;
 import cn.dev33.satoken.reactor.filter.SaReactorFilter;
 import cn.dev33.satoken.router.SaRouter;
 import cn.dev33.satoken.stp.StpUtil;
 import com.alibaba.fastjson2.JSON;
+import com.alibaba.fastjson2.JSONObject;
 import com.uestc.shortlink.gateway.dto.GatewayErrorResult;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
@@ -20,6 +22,10 @@ import java.util.List;
 @Slf4j
 @Configuration
 public class SaTokenConfiguration {
+
+    public static final String ATTR_USER_ID = "gateway.auth.userId";
+    public static final String ATTR_USERNAME = "gateway.auth.username";
+    public static final String ATTR_REAL_NAME = "gateway.auth.realName";
 
     /**
      * 白名单路径
@@ -65,6 +71,7 @@ public class SaTokenConfiguration {
                             tokenValue != null ? tokenValue : "无token");
 
                     StpUtil.checkLogin();
+                    putTrustedUserAttributes();
                     log.info("Token 验证通过: {}", path);
                 })
                 // 异常处理
@@ -83,5 +90,23 @@ public class SaTokenConfiguration {
      */
     private boolean isWhitelist(String path) {
         return WHITE_PATH_LIST.stream().anyMatch(path::startsWith);
+    }
+
+    private void putTrustedUserAttributes() {
+        Object userInfo = StpUtil.getSession().get("userInfo");
+        JSONObject userInfoJson = JSON.parseObject(JSON.toJSONString(userInfo));
+        String userId = stringify(userInfoJson.get("userId"));
+        String username = stringify(userInfoJson.get("username"));
+        String realName = stringify(userInfoJson.get("realName"));
+        if (userId == null || username == null || realName == null) {
+            return;
+        }
+        SaReactorSyncHolder.getExchange().getAttributes().put(ATTR_USER_ID, userId);
+        SaReactorSyncHolder.getExchange().getAttributes().put(ATTR_USERNAME, username);
+        SaReactorSyncHolder.getExchange().getAttributes().put(ATTR_REAL_NAME, realName);
+    }
+
+    private String stringify(Object value) {
+        return value == null ? null : String.valueOf(value);
     }
 }
