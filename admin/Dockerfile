@@ -2,7 +2,7 @@
 FROM maven:3.9-eclipse-temurin-17 AS build
 WORKDIR /build
 COPY . .
-RUN mvn clean package -pl admin -am -DskipTests
+RUN mvn clean package -s settings.xml -pl admin -am -DskipTests
 
 # Run Stage
 FROM eclipse-temurin:17-jre
