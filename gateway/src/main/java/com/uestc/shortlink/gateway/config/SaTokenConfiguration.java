@@ -48,31 +48,28 @@ public class SaTokenConfiguration {
                     String path = SaHolder.getRequest().getRequestPath();
                     String method = SaHolder.getRequest().getMethod();
 
-                    log.info("Gateway 请求: {} {}", method, path);
-
                     // 1. 白名单路径直接放行
                     if (isWhitelist(path)) {
-                        log.info("白名单路径，放行: {}", path);
+                        log.info("Whitelist path passed: {}", path);
                         SaRouter.stop();
                         return;
                     }
 
                     // 2. POST /api/short-link/admin/v1/user 是注册接口，放行
                     if ("POST".equalsIgnoreCase(method) && "/api/short-link/admin/v1/user".equals(path)) {
-                        log.info("注册接口，放行: {}", path);
+                        log.info("Register path passed: {}", path);
                         SaRouter.stop();
                         return;
                     }
 
                     // 3. 验证登录状态
                     String tokenValue = StpUtil.getTokenValue();
-                    log.info("Token 验证 - path={}, token={}",
-                            path,
-                            tokenValue != null ? tokenValue : "无token");
-
                     StpUtil.checkLogin();
+                    // 将用户信息存入 exchange 中
                     putTrustedUserAttributes();
-                    log.info("Token 验证通过: {}", path);
+                    log.info("Token validation - path={}, token={}",
+                            path,
+                            tokenValue != null ? tokenValue : "no-token");
                 })
                 // 异常处理
                 .setError(e -> {
