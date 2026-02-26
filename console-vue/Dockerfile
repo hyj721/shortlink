@@ -6,8 +6,8 @@ WORKDIR /app
 # 复制依赖文件
 COPY package*.json ./
 
-# 安装依赖
-RUN npm ci
+# 安装依赖 (强制使用淘宝镜像源，避免被 lock 文件中的外网 registry 覆盖)
+RUN npm install --registry=https://registry.npmmirror.com
 
 # 复制源代码
 COPY . .
