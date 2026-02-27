@@ -44,6 +44,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.net.URL;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
@@ -66,7 +68,6 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
     private final LinkDeviceStatsMapper linkDeviceStatsMapper;
     private final LinkNetworkStatsMapper linkNetworkStatsMapper;
     private final LinkAccessLogsMapper linkAccessLogsMapper;
-    private final LinkStatsTodayMapper linkStatsTodayMapper;
     private final GotoDomainWhiteListConfiguration gotoDomainWhiteListConfig;
     private final ShortLinkStatsSaveProducer shortLinkStatsSaveProducer;
 
@@ -229,12 +230,6 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                         .build();
                 shortLinkGotoMapper.insert(newGotoDO);
                 // 下面的表没有进行分表，因此无需做删除后再插入的操作
-                LambdaUpdateWrapper<LinkStatsTodayDO> linkStatsTodayUpdateWrapper = Wrappers.lambdaUpdate(LinkStatsTodayDO.class)
-                        .eq(LinkStatsTodayDO::getFullShortUrl, requestParam.getFullShortUrl())
-                        .eq(LinkStatsTodayDO::getGid, hasShortLinkDO.getGid())
-                        .eq(LinkStatsTodayDO::getDelFlag, 0);
-                LinkStatsTodayDO linkStatsTodayDO = LinkStatsTodayDO.builder().gid(requestParam.getGid()).build();
-                linkStatsTodayMapper.update(linkStatsTodayDO, linkStatsTodayUpdateWrapper);
                 LambdaUpdateWrapper<LinkAccessStatsDO> linkAccessStatsUpdateWrapper = Wrappers.lambdaUpdate(LinkAccessStatsDO.class)
                         .eq(LinkAccessStatsDO::getFullShortUrl, requestParam.getFullShortUrl())
                         .eq(LinkAccessStatsDO::getGid, hasShortLinkDO.getGid())
@@ -460,6 +455,8 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                 .uv(uvValue)
                 .uvFirstFlag(verificationUv(fullShortUrl, uvValue))
                 .uipFirstFlag(verificationUip(fullShortUrl, clientIp))
+                .dailyUvFirstFlag(verificationDailyUv(fullShortUrl, uvValue))
+                .dailyUipFirstFlag(verificationDailyUip(fullShortUrl, clientIp))
                 .build();
     }
 
@@ -521,6 +518,40 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
         String uipKey = String.format(SHORT_LINK_STATS_UIP_KEY, fullShortUrl);
         Long added = stringRedisTemplate.opsForSet().add(uipKey, clientIp);
         return (added != null && added > 0) ? 1 : 0;
+    }
+
+    /**
+     * 统计当日 UV（独立访客）
+     *
+     * @return 1 表示当日新访客，0 表示当日已访问
+     */
+    private int verificationDailyUv(String fullShortUrl, String uvValue) {
+        String uvDailyKey = String.format(SHORT_LINK_STATS_UV_DAY_KEY, fullShortUrl, currentStatsDate());
+        Long added = stringRedisTemplate.opsForSet().add(uvDailyKey, uvValue);
+        if (added != null && added > 0) {
+            // 每日去重集合只需短期保留，避免无界增长
+            stringRedisTemplate.expire(uvDailyKey, 2, TimeUnit.DAYS);
+        }
+        return (added != null && added > 0) ? 1 : 0;
+    }
+
+    /**
+     * 统计当日 UIP（独立 IP）
+     *
+     * @return 1 表示当日新 IP，0 表示当日已访问
+     */
+    private int verificationDailyUip(String fullShortUrl, String clientIp) {
+        String uipDailyKey = String.format(SHORT_LINK_STATS_UIP_DAY_KEY, fullShortUrl, currentStatsDate());
+        Long added = stringRedisTemplate.opsForSet().add(uipDailyKey, clientIp);
+        if (added != null && added > 0) {
+            // 每日去重集合只需短期保留，避免无界增长
+            stringRedisTemplate.expire(uipDailyKey, 2, TimeUnit.DAYS);
+        }
+        return (added != null && added > 0) ? 1 : 0;
+    }
+
+    private String currentStatsDate() {
+        return LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE);
     }
 
 

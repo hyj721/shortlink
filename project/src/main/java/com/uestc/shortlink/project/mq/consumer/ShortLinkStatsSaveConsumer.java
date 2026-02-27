@@ -49,7 +49,6 @@ public class ShortLinkStatsSaveConsumer implements StreamListener<String, MapRec
     private final LinkDeviceStatsMapper linkDeviceStatsMapper;
     private final LinkNetworkStatsMapper linkNetworkStatsMapper;
     private final LinkAccessLogsMapper linkAccessLogsMapper;
-    private final LinkStatsTodayMapper linkStatsTodayMapper;
     private final DelayShortLinkStatsProducer delayShortLinkStatsProducer;
     private final StringRedisTemplate stringRedisTemplate;
     private final MessageQueueIdempotentHandler messageQueueIdempotentHandler;
@@ -124,6 +123,12 @@ public class ShortLinkStatsSaveConsumer implements StreamListener<String, MapRec
             String uvValue = statsRecord.getUv();
             Integer uvFirstFlag = statsRecord.getUvFirstFlag();
             Integer uipFirstFlag = statsRecord.getUipFirstFlag();
+            Integer dailyUvFirstFlag = statsRecord.getDailyUvFirstFlag();
+            Integer dailyUipFirstFlag = statsRecord.getDailyUipFirstFlag();
+            int totalUvFlag = Objects.requireNonNullElse(uvFirstFlag, 0);
+            int totalUipFlag = Objects.requireNonNullElse(uipFirstFlag, 0);
+            int todayUvFlag = Objects.requireNonNullElse(dailyUvFirstFlag, totalUvFlag);
+            int todayUipFlag = Objects.requireNonNullElse(dailyUipFirstFlag, totalUipFlag);
 
             Map<String, String> locale = getLocaleByIp(clientIp);
             LocalDateTime now = LocalDateTime.now();
@@ -143,8 +148,6 @@ public class ShortLinkStatsSaveConsumer implements StreamListener<String, MapRec
                     .build();
 
             // ==================== 统计入库 ====================
-            // TODO BUG: uv/uip 是全量 Redis Key 的返回值（历史首次访问标志），
-            //  但 LinkStatsTodayDO 需要的是"当天首次访问"标志。
             statsLocale(fullShortUrl, gid, locale);
             statsBrowser(fullShortUrl, gid, browser);
             statsOs(fullShortUrl, gid, os);
@@ -152,24 +155,15 @@ public class ShortLinkStatsSaveConsumer implements StreamListener<String, MapRec
             statsNetwork(fullShortUrl, gid, network);
             statsAccessLogs(linkAccessLogsDO);
 
-            shortLinkMapper.incrementStats(gid, fullShortUrl, 1, uvFirstFlag, uipFirstFlag);
-            LinkStatsTodayDO linkStatsTodayDO = LinkStatsTodayDO.builder()
-                    .todayPv(1)
-                    .todayUv(uvFirstFlag)   // TODO BUG: 应使用每日 UV 标志
-                    .todayUip(uipFirstFlag) // TODO BUG: 应使用每日 UIP 标志
-                    .gid(gid)
-                    .fullShortUrl(fullShortUrl)
-                    .date(new Date())
-                    .build();
-            linkStatsTodayMapper.shortLinkTodayState(linkStatsTodayDO);
+            shortLinkMapper.incrementStats(gid, fullShortUrl, 1, totalUvFlag, totalUipFlag);
 
             LinkAccessStatsDO linkAccessStatsDO = LinkAccessStatsDO.builder()
                     .gid(gid)
                     .fullShortUrl(fullShortUrl)
                     .date(Date.from(now.toLocalDate().atStartOfDay(ZoneId.systemDefault()).toInstant()))
                     .pv(1)
-                    .uv(uvFirstFlag)
-                    .uip(uipFirstFlag)
+                    .uv(todayUvFlag)
+                    .uip(todayUipFlag)
                     .hour(now.getHour())
                     .weekday(now.getDayOfWeek().getValue())
                     .build();

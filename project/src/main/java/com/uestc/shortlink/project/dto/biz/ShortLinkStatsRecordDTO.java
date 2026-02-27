@@ -58,4 +58,14 @@ public class ShortLinkStatsRecordDTO {
      * UIP访问标识
      */
     private Integer uipFirstFlag;
+
+    /**
+     * 当日 UV 访问标识
+     */
+    private Integer dailyUvFirstFlag;
+
+    /**
+     * 当日 UIP 访问标识
+     */
+    private Integer dailyUipFirstFlag;
 }

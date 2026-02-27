@@ -893,7 +893,7 @@ watch(
     netWorkList.value = [0, 0]
     // 对访问设备类型的数据进行转化
     props.info?.networkStats?.forEach((item) => {
-      if (item.device === 'Mobile') {
+      if (item.network === 'Mobile') {
         netWorkList.value[1] = item.cnt
       } else {
         netWorkList.value[0] = item.cnt
