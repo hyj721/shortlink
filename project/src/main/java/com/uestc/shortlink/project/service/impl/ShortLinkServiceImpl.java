@@ -1,6 +1,5 @@
 package com.uestc.shortlink.project.service.impl;
 
-import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.uestc.shortlink.project.dao.entity.ShortLinkDO;
@@ -19,6 +18,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import java.util.List;
 
@@ -57,7 +57,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
     @Override
     public void updateShortLink(ShortLinkUpdateReqDTO requestParam) {
         // 0. 白名单验证（仅在 originUrl 变更时验证）
-        if (StrUtil.isNotBlank(requestParam.getOriginUrl())) {
+        if (StringUtils.hasText(requestParam.getOriginUrl())) {
             shortLinkWhitelistService.verifyOriginUrl(requestParam.getOriginUrl());
         }
         shortLinkUpdateService.updateShortLink(requestParam);
