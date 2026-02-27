@@ -3,7 +3,6 @@ package com.uestc.shortlink.project.service;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.uestc.shortlink.project.dao.entity.ShortLinkDO;
-import com.uestc.shortlink.project.dto.biz.ShortLinkStatsRecordDTO;
 import com.uestc.shortlink.project.dto.req.ShortLinkBatchCreateReqDTO;
 import com.uestc.shortlink.project.dto.req.ShortLinkCreateReqDTO;
 import com.uestc.shortlink.project.dto.req.ShortLinkPageReqDTO;
@@ -20,44 +19,32 @@ import java.util.List;
 public interface ShortLinkService extends IService<ShortLinkDO> {
 
     /**
-     * 创建短链
-     *
+     * Creates one short-link.
      */
     ShortLinkCreateRespDTO createShortLink(ShortLinkCreateReqDTO requestParam);
 
     /**
-     * 分页查询短链
-     *
+     * Queries short-links with pagination.
      */
     IPage<ShortLinkPageRespDTO> pageShortLink(ShortLinkPageReqDTO requestParam);
 
     /**
-     * 获取短链分组内的短链接数量
-     *
+     * Counts short-links in each group.
      */
     List<ShortLinkGroupCountResp> listGroupShortLinkCount(List<String> requestParam);
 
     /**
-     * 修改短链接
-     *
+     * Updates short-link metadata.
      */
     void updateShortLink(ShortLinkUpdateReqDTO requestParam);
 
     /**
-     * 根据短链接恢复长链接
-     *
+     * Restores original URL and redirects by short URI.
      */
     void restoreLongLink(String shortUri, HttpServletRequest request, HttpServletResponse response);
 
     /**
-     * 批量创建短链接
-     *
+     * Creates short-links in batch.
      */
     ShortLinkBatchCreateRespDTO batchCreateShortLink(ShortLinkBatchCreateReqDTO requestParam);
-
-    /**
-     * 短链接统计
-     *
-     */
-    void shortLinkStats(String gid, ShortLinkStatsRecordDTO statsRecord);
 }

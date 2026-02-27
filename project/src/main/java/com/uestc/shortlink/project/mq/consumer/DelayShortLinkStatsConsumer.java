@@ -1,7 +1,7 @@
 package com.uestc.shortlink.project.mq.consumer;
 
 import com.uestc.shortlink.project.dto.biz.ShortLinkStatsRecordDTO;
-import com.uestc.shortlink.project.service.ShortLinkService;
+import com.uestc.shortlink.project.service.impl.ShortLinkStatsDispatchService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RBlockingDeque;
@@ -15,7 +15,7 @@ import java.util.concurrent.Executors;
 import static com.uestc.shortlink.project.common.constant.RedisKeyConstant.DELAY_QUEUE_STATS_KEY;
 
 /**
- * 延迟记录短链接统计组件
+ * Consumes delayed short-link statistics and dispatches them asynchronously.
  */
 @Component
 @RequiredArgsConstructor
@@ -23,8 +23,11 @@ import static com.uestc.shortlink.project.common.constant.RedisKeyConstant.DELAY
 public class DelayShortLinkStatsConsumer implements InitializingBean {
 
     private final RedissonClient redissonClient;
-    private final ShortLinkService shortLinkService;
+    private final ShortLinkStatsDispatchService shortLinkStatsDispatchService;
 
+    /**
+     * Starts background consumer for delayed stats queue.
+     */
     public void onMessage() {
         Executors.newSingleThreadExecutor(
                 runnable -> {
@@ -39,12 +42,12 @@ public class DelayShortLinkStatsConsumer implements InitializingBean {
                     for (; ; ) {
                         try {
                             ShortLinkStatsRecordDTO statsRecord = blockingDeque.take();
-                            shortLinkService.shortLinkStats(null, statsRecord);
+                            shortLinkStatsDispatchService.dispatch(null, statsRecord);
                         } catch (InterruptedException e) {
-                            // 恢复中断状态或处理停机逻辑
+                            // 恢复中断状态，避免线程无界重试
                             Thread.currentThread().interrupt();
                         } catch (Exception e) {
-                            log.error("处理统计数据失败", e);
+                            log.error("Failed to process short-link stats record.", e);
                         }
                     }
                 });

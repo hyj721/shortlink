@@ -4,16 +4,18 @@ package com.uestc.shortlink.project.controller;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
 
+import static com.uestc.shortlink.project.common.constant.ShortLinkConstant.NOT_FOUND_PAGE_PATH;
+
 /**
- * 短链接不存在跳转控制器
+ * Provides the fallback page for missing short-links.
  */
 @Controller
 public class ShortLinkNotfoundController {
 
     /**
-     * 短链接不存在跳转页面
+     * Renders not-found page.
      */
-    @RequestMapping("/page/notfound")
+    @RequestMapping(NOT_FOUND_PAGE_PATH)
     public String notfound() {
         return "notfound";
     }
