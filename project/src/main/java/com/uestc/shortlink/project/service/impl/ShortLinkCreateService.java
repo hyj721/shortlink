@@ -66,7 +66,6 @@ public class ShortLinkCreateService {
                 .shortUri(suffix)
                 .fullShortUrl(fullShortUrl)
                 .originUrl(requestParam.getOriginUrl())
-                .clickNum(0)
                 .gid(requestParam.getGid())
                 .enableStatus(1)
                 .createdType(requestParam.getCreatedType())

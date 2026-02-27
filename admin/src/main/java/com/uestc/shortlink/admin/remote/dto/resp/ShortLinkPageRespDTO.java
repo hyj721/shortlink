@@ -25,9 +25,6 @@ public class ShortLinkPageRespDTO {
     @Schema(description = "原始链接")
     private String originUrl;
 
-    @Schema(description = "点击量")
-    private Integer clickNum;
-
     @Schema(description = "分组标识")
     private String gid;
 

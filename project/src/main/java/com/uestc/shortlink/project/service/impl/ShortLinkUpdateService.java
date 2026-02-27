@@ -149,7 +149,6 @@ public class ShortLinkUpdateService {
                 .shortUri(existingShortLink.getShortUri())
                 .fullShortUrl(existingShortLink.getFullShortUrl())
                 .originUrl(requestParam.getOriginUrl() != null ? requestParam.getOriginUrl() : existingShortLink.getOriginUrl())
-                .clickNum(existingShortLink.getClickNum())
                 .gid(requestParam.getGid())
                 .enableStatus(existingShortLink.getEnableStatus())
                 .createdType(existingShortLink.getCreatedType())
