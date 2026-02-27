@@ -40,6 +40,11 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
     }
 
     @Override
+    public ShortLinkBatchCreateRespDTO batchCreateShortLink(ShortLinkBatchCreateReqDTO requestParam) {
+        return shortLinkCreateService.batchCreateShortLink(requestParam);
+    }
+
+    @Override
     public IPage<ShortLinkPageRespDTO> pageShortLink(ShortLinkPageReqDTO requestParam) {
         return shortLinkQueryService.pageShortLink(requestParam);
     }
@@ -64,10 +69,5 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
     @Override
     public void restoreLongLink(String shortUri, HttpServletRequest request, HttpServletResponse response) {
         shortLinkRedirectService.restoreLongLink(shortUri, request, response);
-    }
-
-    @Override
-    public ShortLinkBatchCreateRespDTO batchCreateShortLink(ShortLinkBatchCreateReqDTO requestParam) {
-        return shortLinkCreateService.batchCreateShortLink(requestParam);
     }
 }
