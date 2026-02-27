@@ -7,58 +7,43 @@ import lombok.*;
 import java.util.Date;
 
 /**
- * 短链接访问统计实体
+ * Hourly access statistics entity for short links.
  */
 @EqualsAndHashCode(callSuper = true)
 @Data
-@TableName("t_link_access_stats")
+@TableName("t_link_access_hourly_stats")
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class LinkAccessStatsDO extends BaseDO {
+public class LinkAccessHourlyStatsDO extends BaseDO {
 
     /**
-     * id
+     * Primary key.
      */
     private Long id;
 
     /**
-     * 分组标识
+     * Group identifier.
      */
     private String gid;
 
     /**
-     * 完整短链接
+     * Full short URL.
      */
     private String fullShortUrl;
 
     /**
-     * 日期
+     * Statistic date at 00:00:00.
      */
-    private Date date;
+    private Date statDate;
 
     /**
-     * 访问量
+     * Hour bucket, range is 0-23.
      */
-    private Integer pv;
+    private Integer statHour;
 
     /**
-     * 独立访问数
+     * Page view count.
      */
-    private Integer uv;
-
-    /**
-     * 独立IP数
-     */
-    private Integer uip;
-
-    /**
-     * 小时
-     */
-    private Integer hour;
-
-    /**
-     * 星期
-     */
-    private Integer weekday;
+    private Integer pvCnt;
 }

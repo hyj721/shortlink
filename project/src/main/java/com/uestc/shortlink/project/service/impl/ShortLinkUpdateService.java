@@ -5,8 +5,9 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.uestc.shortlink.project.common.convention.exception.ClientException;
 import com.uestc.shortlink.project.common.convention.exception.ServiceException;
+import com.uestc.shortlink.project.dao.entity.LinkAccessDailyStatsDO;
+import com.uestc.shortlink.project.dao.entity.LinkAccessHourlyStatsDO;
 import com.uestc.shortlink.project.dao.entity.LinkAccessLogsDO;
-import com.uestc.shortlink.project.dao.entity.LinkAccessStatsDO;
 import com.uestc.shortlink.project.dao.entity.LinkBrowserStatsDO;
 import com.uestc.shortlink.project.dao.entity.LinkDeviceStatsDO;
 import com.uestc.shortlink.project.dao.entity.LinkLocaleStatsDO;
@@ -14,8 +15,9 @@ import com.uestc.shortlink.project.dao.entity.LinkNetworkStatsDO;
 import com.uestc.shortlink.project.dao.entity.LinkOsStatsDO;
 import com.uestc.shortlink.project.dao.entity.ShortLinkDO;
 import com.uestc.shortlink.project.dao.entity.ShortLinkGotoDO;
+import com.uestc.shortlink.project.dao.mapper.LinkAccessDailyStatsMapper;
+import com.uestc.shortlink.project.dao.mapper.LinkAccessHourlyStatsMapper;
 import com.uestc.shortlink.project.dao.mapper.LinkAccessLogsMapper;
-import com.uestc.shortlink.project.dao.mapper.LinkAccessStatsMapper;
 import com.uestc.shortlink.project.dao.mapper.LinkBrowserStatsMapper;
 import com.uestc.shortlink.project.dao.mapper.LinkDeviceStatsMapper;
 import com.uestc.shortlink.project.dao.mapper.LinkLocaleStatsMapper;
@@ -48,7 +50,8 @@ public class ShortLinkUpdateService {
 
     private final ShortLinkMapper shortLinkMapper;
     private final ShortLinkGotoMapper shortLinkGotoMapper;
-    private final LinkAccessStatsMapper linkAccessStatsMapper;
+    private final LinkAccessDailyStatsMapper linkAccessDailyStatsMapper;
+    private final LinkAccessHourlyStatsMapper linkAccessHourlyStatsMapper;
     private final LinkLocaleStatsMapper linkLocaleStatsMapper;
     private final LinkOsStatsMapper linkOsStatsMapper;
     private final LinkBrowserStatsMapper linkBrowserStatsMapper;
@@ -178,7 +181,8 @@ public class ShortLinkUpdateService {
     }
 
     private void migrateNonShardingTables(String fullShortUrl, String originGid, String targetGid) {
-        updateGidInAccessStats(fullShortUrl, originGid, targetGid);
+        updateGidInAccessDailyStats(fullShortUrl, originGid, targetGid);
+        updateGidInAccessHourlyStats(fullShortUrl, originGid, targetGid);
         updateGidInLocaleStats(fullShortUrl, originGid, targetGid);
         updateGidInOsStats(fullShortUrl, originGid, targetGid);
         updateGidInBrowserStats(fullShortUrl, originGid, targetGid);
@@ -187,13 +191,23 @@ public class ShortLinkUpdateService {
         updateGidInAccessLogs(fullShortUrl, originGid, targetGid);
     }
 
-    private void updateGidInAccessStats(String fullShortUrl, String originGid, String targetGid) {
-        linkAccessStatsMapper.update(
-                LinkAccessStatsDO.builder().gid(targetGid).build(),
-                Wrappers.lambdaUpdate(LinkAccessStatsDO.class)
-                        .eq(LinkAccessStatsDO::getFullShortUrl, fullShortUrl)
-                        .eq(LinkAccessStatsDO::getGid, originGid)
-                        .eq(LinkAccessStatsDO::getDelFlag, 0)
+    private void updateGidInAccessDailyStats(String fullShortUrl, String originGid, String targetGid) {
+        linkAccessDailyStatsMapper.update(
+                LinkAccessDailyStatsDO.builder().gid(targetGid).build(),
+                Wrappers.lambdaUpdate(LinkAccessDailyStatsDO.class)
+                        .eq(LinkAccessDailyStatsDO::getFullShortUrl, fullShortUrl)
+                        .eq(LinkAccessDailyStatsDO::getGid, originGid)
+                        .eq(LinkAccessDailyStatsDO::getDelFlag, 0)
+        );
+    }
+
+    private void updateGidInAccessHourlyStats(String fullShortUrl, String originGid, String targetGid) {
+        linkAccessHourlyStatsMapper.update(
+                LinkAccessHourlyStatsDO.builder().gid(targetGid).build(),
+                Wrappers.lambdaUpdate(LinkAccessHourlyStatsDO.class)
+                        .eq(LinkAccessHourlyStatsDO::getFullShortUrl, fullShortUrl)
+                        .eq(LinkAccessHourlyStatsDO::getGid, originGid)
+                        .eq(LinkAccessHourlyStatsDO::getDelFlag, 0)
         );
     }
 

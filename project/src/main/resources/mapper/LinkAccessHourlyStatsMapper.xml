@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.uestc.shortlink.project.dao.mapper.LinkAccessHourlyStatsMapper">
+
+    <!-- 写入按小时聚合的访问统计，主键冲突时只累加 PV -->
+    <insert id="shortLinkAccessHourlyStats" parameterType="com.uestc.shortlink.project.dao.entity.LinkAccessHourlyStatsDO">
+        INSERT INTO t_link_access_hourly_stats (gid, full_short_url, stat_date, stat_hour, pv_cnt, create_time, update_time, del_flag)
+        VALUES (#{linkAccessHourlyStats.gid}, #{linkAccessHourlyStats.fullShortUrl}, #{linkAccessHourlyStats.statDate}, #{linkAccessHourlyStats.statHour}, #{linkAccessHourlyStats.pvCnt}, NOW(), NOW(), 0)
+        ON DUPLICATE KEY UPDATE
+            pv_cnt = pv_cnt + #{linkAccessHourlyStats.pvCnt},
+            update_time = NOW()
+    </insert>
+
+    <!-- 查询指定日期区间内的按小时统计结果 -->
+    <select id="listHourlyStatsByShortLink" resultType="com.uestc.shortlink.project.dao.entity.LinkAccessHourlyStatsDO">
+        SELECT id, gid, full_short_url, stat_date, stat_hour, pv_cnt
+        FROM t_link_access_hourly_stats
+        WHERE gid = #{param.gid}
+          AND full_short_url = #{param.fullShortUrl}
+          AND stat_date BETWEEN #{param.startDate} AND #{param.endDate}
+          AND del_flag = 0
+    </select>
+
+</mapper>

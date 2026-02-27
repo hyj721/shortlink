@@ -42,7 +42,8 @@ public class ShortLinkStatsSaveConsumer implements StreamListener<String, MapRec
     private final RedissonClient redissonClient;
     private final ShortLinkMapper shortLinkMapper;
     private final ShortLinkGotoMapper shortLinkGotoMapper;
-    private final LinkAccessStatsMapper linkAccessStatsMapper;
+    private final LinkAccessDailyStatsMapper linkAccessDailyStatsMapper;
+    private final LinkAccessHourlyStatsMapper linkAccessHourlyStatsMapper;
     private final LinkLocaleStatsMapper linkLocaleStatsMapper;
     private final LinkOsStatsMapper linkOsStatsMapper;
     private final LinkBrowserStatsMapper linkBrowserStatsMapper;
@@ -156,21 +157,41 @@ public class ShortLinkStatsSaveConsumer implements StreamListener<String, MapRec
             statsAccessLogs(linkAccessLogsDO);
 
             shortLinkMapper.incrementStats(gid, fullShortUrl, 1, totalUvFlag, totalUipFlag);
-
-            LinkAccessStatsDO linkAccessStatsDO = LinkAccessStatsDO.builder()
-                    .gid(gid)
-                    .fullShortUrl(fullShortUrl)
-                    .date(Date.from(now.toLocalDate().atStartOfDay(ZoneId.systemDefault()).toInstant()))
-                    .pv(1)
-                    .uv(todayUvFlag)
-                    .uip(todayUipFlag)
-                    .hour(now.getHour())
-                    .weekday(now.getDayOfWeek().getValue())
-                    .build();
-            linkAccessStatsMapper.shortLinkAccessStats(linkAccessStatsDO);
+            Date statDate = Date.from(now.toLocalDate().atStartOfDay(ZoneId.systemDefault()).toInstant());
+            statsAccessDaily(fullShortUrl, gid, statDate, todayUvFlag, todayUipFlag);
+            statsAccessHourly(fullShortUrl, gid, statDate, now.getHour());
         } finally {
             rLock.unlock();
         }
+    }
+
+    /**
+     * 记录按天聚合的访问统计
+     */
+    private void statsAccessDaily(String fullShortUrl, String gid, Date statDate, int todayUvFlag, int todayUipFlag) {
+        LinkAccessDailyStatsDO linkAccessDailyStatsDO = LinkAccessDailyStatsDO.builder()
+                .gid(gid)
+                .fullShortUrl(fullShortUrl)
+                .statDate(statDate)
+                .pvCnt(1)
+                .uvCnt(todayUvFlag)
+                .uipCnt(todayUipFlag)
+                .build();
+        linkAccessDailyStatsMapper.shortLinkAccessDailyStats(linkAccessDailyStatsDO);
+    }
+
+    /**
+     * 记录按小时聚合的访问统计
+     */
+    private void statsAccessHourly(String fullShortUrl, String gid, Date statDate, int statHour) {
+        LinkAccessHourlyStatsDO linkAccessHourlyStatsDO = LinkAccessHourlyStatsDO.builder()
+                .gid(gid)
+                .fullShortUrl(fullShortUrl)
+                .statDate(statDate)
+                .statHour(statHour)
+                .pvCnt(1)
+                .build();
+        linkAccessHourlyStatsMapper.shortLinkAccessHourlyStats(linkAccessHourlyStatsDO);
     }
 
     private void statsLocale(String fullShortUrl, String gid, Map<String, String> locale) {

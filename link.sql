@@ -759,24 +759,42 @@ CREATE TABLE `t_link_access_logs` (
 ) ENGINE=InnoDB AUTO_INCREMENT=2005128266377080835 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- ----------------------------
--- Table structure for t_link_access_stats
+-- 表结构：按天聚合的访问统计
 -- ----------------------------
-DROP TABLE IF EXISTS `t_link_access_stats`;
-CREATE TABLE `t_link_access_stats` (
+DROP TABLE IF EXISTS `t_link_access_daily_stats`;
+CREATE TABLE `t_link_access_daily_stats` (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT 'ID',
   `gid` varchar(32) DEFAULT NULL COMMENT '分组标识',
   `full_short_url` varchar(128) DEFAULT NULL COMMENT '完整短链接',
-  `date` date DEFAULT NULL COMMENT '日期',
-  `pv` int DEFAULT NULL COMMENT '访问量',
-  `uv` int DEFAULT NULL COMMENT '独立访问数',
-  `uip` int DEFAULT NULL COMMENT '独立IP数',
-  `hour` int DEFAULT NULL COMMENT '小时',
-  `weekday` int DEFAULT NULL COMMENT '星期',
+  `stat_date` date DEFAULT NULL COMMENT '统计日期（天）',
+  `pv_cnt` int DEFAULT '0' COMMENT '当日PV',
+  `uv_cnt` int DEFAULT '0' COMMENT '当日UV',
+  `uip_cnt` int DEFAULT '0' COMMENT '当日UIP',
   `create_time` datetime DEFAULT NULL COMMENT '创建时间',
   `update_time` datetime DEFAULT NULL COMMENT '修改时间',
-  `del_flag` tinyint(1) DEFAULT NULL COMMENT '删除标识',
+  `del_flag` tinyint(1) DEFAULT NULL COMMENT '删除标识 0：未删除 1：已删除',
   PRIMARY KEY (`id`) USING BTREE,
-  UNIQUE KEY `idx_unique_access_stats` (`full_short_url`,`gid`,`date`,`hour`) USING BTREE
+  UNIQUE KEY `idx_unique_access_daily_stats` (`full_short_url`,`gid`,`stat_date`) USING BTREE,
+  KEY `idx_access_daily_query` (`gid`,`full_short_url`,`stat_date`) USING BTREE
+) ENGINE=InnoDB AUTO_INCREMENT=17 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- ----------------------------
+-- 表结构：按小时聚合的访问统计
+-- ----------------------------
+DROP TABLE IF EXISTS `t_link_access_hourly_stats`;
+CREATE TABLE `t_link_access_hourly_stats` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT 'ID',
+  `gid` varchar(32) DEFAULT NULL COMMENT '分组标识',
+  `full_short_url` varchar(128) DEFAULT NULL COMMENT '完整短链接',
+  `stat_date` date DEFAULT NULL COMMENT '统计日期（天）',
+  `stat_hour` tinyint DEFAULT NULL COMMENT '统计小时（0-23）',
+  `pv_cnt` int DEFAULT '0' COMMENT '当小时PV',
+  `create_time` datetime DEFAULT NULL COMMENT '创建时间',
+  `update_time` datetime DEFAULT NULL COMMENT '修改时间',
+  `del_flag` tinyint(1) DEFAULT NULL COMMENT '删除标识 0：未删除 1：已删除',
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE KEY `idx_unique_access_hourly_stats` (`full_short_url`,`gid`,`stat_date`,`stat_hour`) USING BTREE,
+  KEY `idx_access_hourly_query` (`gid`,`full_short_url`,`stat_date`) USING BTREE
 ) ENGINE=InnoDB AUTO_INCREMENT=17 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- ----------------------------

@@ -5,8 +5,9 @@ import cn.hutool.core.date.DateUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.uestc.shortlink.project.dao.entity.LinkAccessDailyStatsDO;
 import com.uestc.shortlink.project.dao.entity.LinkAccessLogsDO;
-import com.uestc.shortlink.project.dao.entity.LinkAccessStatsDO;
+import com.uestc.shortlink.project.dao.entity.LinkAccessHourlyStatsDO;
 import com.uestc.shortlink.project.dao.mapper.*;
 import com.uestc.shortlink.project.dto.req.ShortLinkStatsAccessRecordReqDTO;
 import com.uestc.shortlink.project.dto.req.ShortLinkStatsReqDTO;
@@ -15,16 +16,19 @@ import com.uestc.shortlink.project.service.ShortLinkStatsService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
 public class ShortLinkStatsServiceImpl implements ShortLinkStatsService {
 
-    private final LinkAccessStatsMapper linkAccessStatsMapper;
+    private final LinkAccessDailyStatsMapper linkAccessDailyStatsMapper;
+    private final LinkAccessHourlyStatsMapper linkAccessHourlyStatsMapper;
     private final LinkLocaleStatsMapper linkLocaleStatsMapper;
     private final LinkBrowserStatsMapper linkBrowserStatsMapper;
     private final LinkOsStatsMapper linkOsStatsMapper;
@@ -34,10 +38,10 @@ public class ShortLinkStatsServiceImpl implements ShortLinkStatsService {
 
     @Override
     public ShortLinkStatsRespDTO oneShortLinkStats(ShortLinkStatsReqDTO requestParam) {
-        // 1. 查询基础访问统计列表
-        List<LinkAccessStatsDO> listStatsByShortLink = linkAccessStatsMapper.listStatsByShortLink(requestParam);
+        // 1. 查询按天聚合的统计列表
+        List<LinkAccessDailyStatsDO> dailyStatsByShortLink = linkAccessDailyStatsMapper.listDailyStatsByShortLink(requestParam);
         // 快速失败：如果没有数据，直接返回 null
-        if (CollUtil.isEmpty(listStatsByShortLink)) {
+        if (CollUtil.isEmpty(dailyStatsByShortLink)) {
             return null;
         }
 
@@ -45,32 +49,23 @@ public class ShortLinkStatsServiceImpl implements ShortLinkStatsService {
         int pv = 0;
         int uv = 0;
         int uip = 0;
-        for (LinkAccessStatsDO stat : listStatsByShortLink) {
-            pv += stat.getPv();
-            uv += stat.getUv();
-            uip += stat.getUip();
+        for (LinkAccessDailyStatsDO stat : dailyStatsByShortLink) {
+            pv += Objects.requireNonNullElse(stat.getPvCnt(), 0);
+            uv += Objects.requireNonNullElse(stat.getUvCnt(), 0);
+            uip += Objects.requireNonNullElse(stat.getUipCnt(), 0);
         }
 
-        // 3. 每日基础访问统计 (按日期分组汇总)
-        Map<String, int[]> dailyMap = new HashMap<>();
-        for (LinkAccessStatsDO stat : listStatsByShortLink) {
-            String dateKey = DateUtil.format(stat.getDate(), "yyyy-MM-dd");
-            int[] values = dailyMap.getOrDefault(dateKey, new int[]{0, 0, 0});
-            values[0] += stat.getPv();
-            values[1] += stat.getUv();
-            values[2] += stat.getUip();
-            dailyMap.put(dateKey, values);
-        }
-        List<String> sortedDates = new ArrayList<>(dailyMap.keySet());
-        sortedDates.sort(String::compareTo);
+        // 3. 每日基础访问统计
         List<ShortLinkStatsAccessDailyRespDTO> daily = new ArrayList<>();
-        for (String dateKey : sortedDates) {
-            int[] values = dailyMap.get(dateKey);
+        for (LinkAccessDailyStatsDO stat : dailyStatsByShortLink) {
+            if (stat.getStatDate() == null) {
+                continue;
+            }
             daily.add(ShortLinkStatsAccessDailyRespDTO.builder()
-                    .date(dateKey)
-                    .pv(values[0])
-                    .uv(values[1])
-                    .uip(values[2])
+                    .date(DateUtil.format(stat.getStatDate(), "yyyy-MM-dd"))
+                    .pv(Objects.requireNonNullElse(stat.getPvCnt(), 0))
+                    .uv(Objects.requireNonNullElse(stat.getUvCnt(), 0))
+                    .uip(Objects.requireNonNullElse(stat.getUipCnt(), 0))
                     .build());
         }
 
@@ -79,21 +74,35 @@ public class ShortLinkStatsServiceImpl implements ShortLinkStatsService {
         for (int i = 0; i < 24; i++) {
             hourStats.add(0);
         }
-        for (LinkAccessStatsDO stat : listStatsByShortLink) {
-            int hour = stat.getHour();
-            hourStats.set(hour, hourStats.get(hour) + stat.getPv());
+        List<LinkAccessHourlyStatsDO> hourlyStatsByShortLink = linkAccessHourlyStatsMapper.listHourlyStatsByShortLink(requestParam);
+        if (CollUtil.isNotEmpty(hourlyStatsByShortLink)) {
+            for (LinkAccessHourlyStatsDO stat : hourlyStatsByShortLink) {
+                int hour = Objects.requireNonNullElse(stat.getStatHour(), -1);
+                if (hour < 0 || hour > 23) {
+                    continue;
+                }
+                int hourPvCnt = Objects.requireNonNullElse(stat.getPvCnt(), 0);
+                hourStats.set(hour, hourStats.get(hour) + hourPvCnt);
+            }
         }
 
-        // 5. 一周访问分布 (下标 0-6，对应周一到周日)
+        // 5. 一周访问分布 (下标 0-6，对应周一到周日)，按日期动态推导，不在表中冗余存储 weekday
         List<Integer> weekdayStats = new ArrayList<>();
         for (int i = 0; i < 7; i++) {
             weekdayStats.add(0);
         }
-        for (LinkAccessStatsDO stat : listStatsByShortLink) {
-            int weekday = stat.getWeekday(); // weekday 字段存的是 1-7
-            if (weekday >= 1 && weekday <= 7) {
-                weekdayStats.set(weekday - 1, weekdayStats.get(weekday - 1) + stat.getPv());
+        for (LinkAccessDailyStatsDO stat : dailyStatsByShortLink) {
+            if (stat.getStatDate() == null) {
+                continue;
             }
+            int weekday = stat.getStatDate()
+                    .toInstant()
+                    .atZone(ZoneId.systemDefault())
+                    .toLocalDate()
+                    .getDayOfWeek()
+                    .getValue() - 1;
+            int dailyPvCnt = Objects.requireNonNullElse(stat.getPvCnt(), 0);
+            weekdayStats.set(weekday, weekdayStats.get(weekday) + dailyPvCnt);
         }
 
         // 6. 地区统计 + 计算占比

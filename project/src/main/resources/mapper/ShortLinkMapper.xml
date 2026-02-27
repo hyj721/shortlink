@@ -24,11 +24,11 @@
         LEFT JOIN (
             SELECT gid,
                    full_short_url,
-                   SUM(pv) AS todayPv,
-                   SUM(uv) AS todayUv,
-                   SUM(uip) AS todayUip
-            FROM t_link_access_stats
-            WHERE date = CURDATE()
+                   SUM(pv_cnt) AS todayPv,
+                   SUM(uv_cnt) AS todayUv,
+                   SUM(uip_cnt) AS todayUip
+            FROM t_link_access_daily_stats
+            WHERE stat_date = CURDATE()
               AND del_flag = 0
             GROUP BY gid, full_short_url
         ) s ON t.gid = s.gid
