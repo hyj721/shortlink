@@ -17,22 +17,14 @@
 
     <select id="pageLink" resultType="com.uestc.shortlink.project.dao.entity.ShortLinkDO">
         SELECT t.*,
-        COALESCE(s.todayPv, 0) AS todayPv,
-        COALESCE(s.todayUv, 0) AS todayUv,
-        COALESCE(s.todayUip, 0) AS todayUip
+        COALESCE(s.pv_cnt, 0) AS todayPv,
+        COALESCE(s.uv_cnt, 0) AS todayUv,
+        COALESCE(s.uip_cnt, 0) AS todayUip
         FROM t_link t
-        LEFT JOIN (
-            SELECT gid,
-                   full_short_url,
-                   SUM(pv_cnt) AS todayPv,
-                   SUM(uv_cnt) AS todayUv,
-                   SUM(uip_cnt) AS todayUip
-            FROM t_link_access_daily_stats
-            WHERE stat_date = CURDATE()
-              AND del_flag = 0
-            GROUP BY gid, full_short_url
-        ) s ON t.gid = s.gid
+        LEFT JOIN t_link_access_daily_stats s ON t.gid = s.gid
         AND t.full_short_url = s.full_short_url
+        AND s.stat_date = CURDATE()
+        AND s.del_flag = 0
         WHERE t.gid = #{gid}
         AND t.enable_status = 1
         AND t.del_flag = 0
